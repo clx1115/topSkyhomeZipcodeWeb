@@ -1,0 +1,32 @@
+services:
+  nodejs:
+    container_name: topsky_chat_node
+    hostname: topsky_chat_node
+    restart: always
+    image: topsky/prod:1.0.1
+    build:
+      context: .
+    volumes:
+      - ./www:/www:rw
+#      - ./app:/app
+      - ./logs:/var/log/
+    tty: true
+    ports:
+      - "3008:3000"
+#    command:
+#      - /bin/bash
+#      - -c
+#      - >
+#        echo "nodejs app..."
+#        && cd /app
+#        && chmod +x ./
+#        && yarn install && yarn run build
+#        && cp ./ecosystem.config.js ./.output
+#        && rm -rf /www/* && mv ./.output/* /www
+#        && cd /www
+#        && echo "build success"
+#        && pm2-docker start ./ecosystem.config.js
+networks:
+  default:
+    external: true
+    name: devops

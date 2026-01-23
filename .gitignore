@@ -1,0 +1,7 @@
+node_modules
+*.log*
+.nuxt
+.idea
+.DS_Store
+yarn.lock
+!.output/server/node_modules

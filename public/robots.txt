@@ -1,0 +1,4 @@
+Users-agent: *
+Disallow: /user
+Disallow: /user/*
+Sitemap: https://www.topskyhome.com/sitemap.xml

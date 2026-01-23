@@ -1,0 +1,48 @@
+{
+  "name": "topskyhome",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build --dotenv .env.production",
+    "dev": "nuxt dev --dotenv .env.development"
+  },
+  "devDependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "@element-plus/nuxt": "^1.0.8",
+    "@stefanobartoletti/nuxt-social-share": "^2.2.1",
+    "@types/aos": "^3.0.7",
+    "@types/google.maps": "^3.55.5",
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^20.11.28",
+    "@types/scrollreveal": "^0.0.11",
+    "@vue/shared": "^3.4.15",
+    "@vueuse/core": "^10.7.2",
+    "element-plus": "^2.7.1",
+    "eslint": "^8.39.0",
+    "nuxt": "^3.11.1",
+    "nuxt-gtag": "^3.0.2",
+    "sass": "^1.62.1",
+    "typescript": "^5.4.3"
+  },
+  "dependencies": {
+    "@funken-studio/sitemap-nuxt-3": "^4.0.4",
+    "@googlemaps/js-api-loader": "^1.16.6",
+    "@matechat/core": "^1.4.0",
+    "@pinia/nuxt": "^0.5.1",
+    "@tiptap/extension-image": "^3.13.0",
+    "@tiptap/extension-link": "^3.13.0",
+    "@tiptap/extension-placeholder": "^3.13.0",
+    "@tiptap/starter-kit": "^3.13.0",
+    "@tiptap/vue-3": "^3.13.0",
+    "@types/leaflet.markercluster": "^1.5.6",
+    "aos": "^2.3.4",
+    "echarts": "^6.0.0",
+    "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
+    "openai": "^4.98.0",
+    "pinia": "^2.1.6",
+    "qrcode": "^1.5.4",
+    "signature_pad": "^5.0.4",
+    "vue-dompurify-html": "^5.0.1"
+  }
+}
