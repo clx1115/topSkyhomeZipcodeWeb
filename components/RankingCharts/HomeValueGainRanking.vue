@@ -2,7 +2,7 @@
 	<div class="chart-item">
 		<div class="chart-header">
 			<h3>Home Value Gain Ranking</h3>
-			<div class="chart-filters">
+			<div class="chart-filters" v-if="showFilters">
 				<div class="year-filter">
 					<span>Base Year</span>
 					<el-select v-model="localBaseYear" size="small" style="width: 75px" @change="updateYears">
@@ -87,6 +87,10 @@ const props = defineProps({
 	yearList: {
 		type: Array as PropType<number[]>,
 		default: () => []
+	},
+	showFilters: {
+		type: Boolean,
+		default: true
 	}
 })
 

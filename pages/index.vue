@@ -78,105 +78,54 @@
 					</template>
 				</div>
 
-				<div class="filter-section">
-					<div class="section-title">Housing Metrics Ranking (Top {{ topN }})</div>
-					<div class="controls">
-						<div class="control-item">
-							<span class="label">Top n</span>
-							<el-input-number v-model="topN" :min="1" :max="100" controls-position="right" size="default" class="w-20" />
-						</div>
-						<div class="control-item">
-							<span class="label">Metro</span>
-							<el-select
-								v-model="selectedMetros"
-								multiple
-								collapse-tags
-								collapse-tags-tooltip
-								placeholder="Select Metro"
-								style="width: 240px"
-								size="default"
-								filterable
-								:filter-method="filterMetros"
-							>
-								<el-option
-									v-for="item in metroList"
-									:key="item"
-									:label="item"
-									:value="item"
-								>
-									<div class="custom-option-item">
-										<el-checkbox :model-value="selectedMetros.includes(item)" size="small" style="pointer-events: none; margin-right: 8px;" />
-										<span class="option-text">{{ item }}</span>
-									</div>
-								</el-option>
-							</el-select>
-						</div>
-						<div class="control-item">
-							<span class="label">Zipcode</span>
-							<el-select
-								v-model="selectedZipcodes"
-								multiple
-								collapse-tags
-								collapse-tags-tooltip
-								placeholder="(All)"
-								style="width: 160px"
-								size="default"
-								filterable
-								:filter-method="filterZipcodes"
-							>
-								<el-option
-									v-for="item in zipcodeList"
-									:key="item"
-									:label="item"
-									:value="item"
-								>
-									<div class="custom-option-item">
-										<el-checkbox :model-value="selectedZipcodes.includes(item)" size="small" style="pointer-events: none; margin-right: 8px;" />
-										<span class="option-text">{{ item }}</span>
-									</div>
-								</el-option>
-							</el-select>
-						</div>
-					</div>
-				</div>
-
 				<!-- Charts Section -->
-				<div class="charts-section">
-					<div class="chart-row">
-						<!-- Chart 1: Home Value Gain Ranking -->
-						<HomeValueGainRanking 
-							:data="rankingData" 
-							v-model:baseYear="rankingBaseYear"
-							v-model:currentYear="rankingCurrentYear"
-							:yearList="yearList"
-							@showTooltip="showTooltip"
-							@moveTooltip="moveTooltip"
-							@hideTooltip="hideTooltip"
-						/>
-						
-						<!-- Chart 2: Rent to Home Value Ranking -->
-						<RentToHomeValueRanking 
-							:data="rentToValueData"
-							@showTooltip="showTooltip"
-							@moveTooltip="moveTooltip"
-							@hideTooltip="hideTooltip"
-						/>
+				<!-- Tab Content Switcher -->
+				<MetroTab 
+					v-if="currentTab === 'Metro'"
+					:rankingData="rankingData"
+					:rentToValueData="rentToValueData"
+					:homeValueData="homeValueData"
+					:rentData="rentData"
+					v-model:rankingBaseYear="rankingBaseYear"
+					v-model:rankingCurrentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:topN="topN"
+					@update:topN="topN = $event"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
+				
+				<HomeValueGainTab 
+					v-else-if="currentTab === 'Home Value Gain'"
+					:data="rankingData"
+					v-model:baseYear="rankingBaseYear"
+					v-model:currentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
 
-						<!-- Chart 3: Home Value Ranking -->
-						<HomeValueRanking
-							:data="homeValueData"
-							@showTooltip="showTooltip"
-							@moveTooltip="moveTooltip"
-							@hideTooltip="hideTooltip"
-						/>
-
-						<!-- Chart 4: Rent Ranking -->
-						<RentRanking
-							:data="rentData"
-							@showTooltip="showTooltip"
-							@moveTooltip="moveTooltip"
-							@hideTooltip="hideTooltip"
-						/>
+				<div v-else class="charts-section">
+					<div class="chart-item placeholder">
+						<span>{{ currentTab }} Module Placeholder</span>
 					</div>
 				</div>
 			</ClientOnly>
@@ -186,10 +135,12 @@
 <script setup lang="ts">
 	import { getZipcodeMetrosList, getZipcodeList, growthRate, zipcodeRank } from "@/api/charts"
 	import { ref, onMounted, watch, computed } from 'vue'
-	import HomeValueGainRanking from '@/components/RankingCharts/HomeValueGainRanking.vue'
-	import RentToHomeValueRanking from '@/components/RankingCharts/RentToHomeValueRanking.vue'
-	import HomeValueRanking from '@/components/RankingCharts/HomeValueRanking.vue'
-	import RentRanking from '@/components/RankingCharts/RentRanking.vue'
+	import MetroTab from '@/components/Tabs/MetroTab.vue'
+	import HomeValueGainTab from '@/components/Tabs/HomeValueGainTab.vue'
+	// import HomeValueGainRanking from '@/components/RankingCharts/HomeValueGainRanking.vue'
+	// import RentToHomeValueRanking from '@/components/RankingCharts/RentToHomeValueRanking.vue'
+	// import HomeValueRanking from '@/components/RankingCharts/HomeValueRanking.vue'
+	// import RentRanking from '@/components/RankingCharts/RentRanking.vue'
 
 	const tabs = ['Metro','Home Value Gain', 'Rent to Home Value', 'Home Value', 'Rent']
 	const currentTab = ref('Metro')
