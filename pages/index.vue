@@ -123,11 +123,62 @@
 					@hideTooltip="hideTooltip"
 				/>
 
-				<div v-else class="charts-section">
-					<div class="chart-item placeholder">
-						<span>{{ currentTab }} Module Placeholder</span>
-					</div>
-				</div>
+				<RentToHomeValueTab 
+					v-else-if="currentTab === 'Rent to Home Value'"
+					:data="rentToValueData"
+					v-model:baseYear="rankingBaseYear"
+					v-model:currentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
+
+				<HomeValueTab 
+					v-else-if="currentTab === 'Home Value'"
+					:data="homeValueData"
+					v-model:baseYear="rankingBaseYear"
+					v-model:currentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
+
+				<RentTab 
+					v-else-if="currentTab === 'Rent'"
+					:data="rentData"
+					v-model:baseYear="rankingBaseYear"
+					v-model:currentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
 			</ClientOnly>
 		</div>
 	</div>
@@ -137,10 +188,9 @@
 	import { ref, onMounted, watch, computed } from 'vue'
 	import MetroTab from '@/components/Tabs/MetroTab.vue'
 	import HomeValueGainTab from '@/components/Tabs/HomeValueGainTab.vue'
-	// import HomeValueGainRanking from '@/components/RankingCharts/HomeValueGainRanking.vue'
-	// import RentToHomeValueRanking from '@/components/RankingCharts/RentToHomeValueRanking.vue'
-	// import HomeValueRanking from '@/components/RankingCharts/HomeValueRanking.vue'
-	// import RentRanking from '@/components/RankingCharts/RentRanking.vue'
+	import RentToHomeValueTab from '@/components/Tabs/RentToHomeValueTab.vue'
+	import HomeValueTab from '@/components/Tabs/HomeValueTab.vue'
+	import RentTab from '@/components/Tabs/RentTab.vue'
 
 	const tabs = ['Metro','Home Value Gain', 'Rent to Home Value', 'Home Value', 'Rent']
 	const currentTab = ref('Metro')
