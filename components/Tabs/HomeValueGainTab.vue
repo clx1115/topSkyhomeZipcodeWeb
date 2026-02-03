@@ -191,31 +191,53 @@ defineEmits([
 				color: #666;
 			}
 
-			/* Fix for Metro dropdown height */
+			/* Fix for Metro dropdown height and tag positioning */
 			:deep(.el-select__wrapper) {
 				min-height: 32px !important;
 				height: 32px !important;
-				padding: 0 12px !important;
+				padding: 0 8px !important;
 			}
 			
 			:deep(.el-select__tags) {
+				position: absolute !important;
+				top: 0 !important;
+				bottom: 0 !important;
+				transform: none !important;
+				margin: 0 !important;
+				display: flex !important;
 				flex-wrap: nowrap !important;
+				align-items: center !important;
 				overflow: hidden !important;
-				max-width: 100% !important;
-				top: 50% !important;
-				transform: translateY(-50%) !important;
+				max-width: calc(100% - 30px) !important;
+			}
+
+			:deep(.el-select__tags > span) {
+				display: flex !important;
+				align-items: center !important;
+				flex-wrap: nowrap !important;
 			}
 			
 			:deep(.el-tag) {
-				display: flex;
-				align-items: center;
-				max-width: 150px; /* Limit tag width */
+				display: inline-flex !important;
+				align-items: center !important;
+				justify-content: center !important;
+				height: 22px !important;
+				line-height: 22px !important;
+				margin: 0 2px !important;
+				padding: 0 4px !important;
+				box-sizing: border-box !important;
 			}
 			
 			:deep(.el-tag__content) {
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
+				display: inline-block !important;
+				max-width: 70px !important;
+				overflow: hidden !important;
+				text-overflow: ellipsis !important;
+				white-space: nowrap !important;
+			}
+
+			:deep(.el-tag__close) {
+				margin-left: 2px !important;
 			}
 		}
 	}
