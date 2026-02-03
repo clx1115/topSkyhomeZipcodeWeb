@@ -144,39 +144,196 @@
 				<div class="charts-section">
 					<div class="chart-row">
 						<!-- Chart 1: Home Value Gain Ranking -->
-						<HomeValueGainRanking 
-							:data="rankingData" 
-							v-model:baseYear="rankingBaseYear"
-							v-model:currentYear="rankingCurrentYear"
-							:yearList="yearList"
-							@showTooltip="showTooltip"
-							@moveTooltip="moveTooltip"
-							@hideTooltip="hideTooltip"
-						/>
+						<div class="chart-item">
+							<div class="chart-header">
+								<h3>Home Value Gain Ranking</h3>
+								<div class="chart-filters">
+									<div class="year-filter">
+										<span>Base Year</span>
+										<el-select v-model="rankingBaseYear" size="small" style="width: 75px">
+											<el-option v-for="year in yearList" :key="year" :label="year" :value="year" />
+										</el-select>
+									</div>
+									<div class="year-filter">
+										<span>Current Year</span>
+										<el-select v-model="rankingCurrentYear" size="small" style="width: 75px">
+											<el-option v-for="year in yearList" :key="year" :label="year" :value="year" />
+										</el-select>
+									</div>
+								</div>
+							</div>
+							<div class="chart-content">
+								<div class="ranking-table-header">
+									<span class="col-zip">Zipcode</span>
+									<span class="col-city">City</span>
+									<span class="col-metro">Metro</span>
+									<span class="col-growth"></span>
+								</div>
+								<div class="ranking-table-body">
+									<div 
+										v-for="(item, index) in rankingData" 
+										:key="index" 
+										class="ranking-row"
+										@mouseenter="showTooltip($event, item, 'growth')"
+										@mousemove="moveTooltip"
+										@mouseleave="hideTooltip"
+									>
+										<span class="col-zip">{{ item.zipcode }}</span>
+										<span class="col-city">{{ item.city }}</span>
+										<span class="col-metro">{{ item.metro }}</span>
+										<div class="col-growth">
+											<div class="diverging-bar-container">
+												<div class="bar-side left">
+													<template v-if="(item.growth_rate || 0) < 0">
+														<span class="growth-text negative">{{ (item.growth_rate || 0).toFixed(1) }}%</span>
+														<div 
+															class="growth-bar negative" 
+															:style="{ width: (Math.abs(item.growth_rate || 0) / maxGrowthVal * 100) + '%' }"
+														></div>
+													</template>
+												</div>
+												<div class="axis-line"></div>
+												<div class="bar-side right">
+													<template v-if="(item.growth_rate || 0) >= 0">
+														<div 
+															class="growth-bar positive" 
+															:style="{ width: (Math.abs(item.growth_rate || 0) / maxGrowthVal * 100) + '%' }"
+														></div>
+														<span class="growth-text positive">{{ (item.growth_rate || 0).toFixed(1) }}%</span>
+													</template>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div v-if="rankingData.length === 0" class="no-data">
+										No data available
+									</div>
+								</div>
+							</div>
+						</div>
 						
 						<!-- Chart 2: Rent to Home Value Ranking -->
-						<RentToHomeValueRanking 
-							:data="rentToValueData"
-							@showTooltip="showTooltip"
-							@moveTooltip="moveTooltip"
-							@hideTooltip="hideTooltip"
-						/>
+						<div class="chart-item">
+							<div class="chart-header">
+								<h3>Rent to Home Value Ranking</h3>
+							</div>
+							<div class="chart-content">
+								<div class="ranking-table-header">
+									<span class="col-zip">Zipcode</span>
+									<span class="col-city">City</span>
+									<span class="col-metro">Metro</span>
+									<span class="col-growth"></span>
+								</div>
+								<div class="ranking-table-body">
+									<div 
+										v-for="(item, index) in rentToValueData" 
+										:key="index" 
+										class="ranking-row"
+										@mouseenter="showTooltip($event, item, 'rent_to_value')"
+										@mousemove="moveTooltip"
+										@mouseleave="hideTooltip"
+									>
+										<span class="col-zip">{{ item.zipcode }}</span>
+										<span class="col-city">{{ item.city }}</span>
+										<span class="col-metro">{{ item.metro }}</span>
+										<div class="col-growth">
+											<div class="growth-bar-container">
+												<div 
+													class="growth-bar" 
+													:style="{ width: ((item.value || 0) / maxRentToValueVal * 100) + '%', backgroundColor: getBarColor(index) }"
+												></div>
+												<span class="growth-text">{{ ((item.value || 0) * 100).toFixed(1) }}%</span>
+											</div>
+										</div>
+									</div>
+									<div v-if="rentToValueData.length === 0" class="no-data">
+										No data available
+									</div>
+								</div>
+							</div>
+						</div>
 
 						<!-- Chart 3: Home Value Ranking -->
-						<HomeValueRanking
-							:data="homeValueData"
-							@showTooltip="showTooltip"
-							@moveTooltip="moveTooltip"
-							@hideTooltip="hideTooltip"
-						/>
+						<div class="chart-item">
+							<div class="chart-header">
+								<h3>Home Value Ranking</h3>
+							</div>
+							<div class="chart-content">
+								<div class="ranking-table-header">
+									<span class="col-zip">Zipcode</span>
+									<span class="col-city">City</span>
+									<span class="col-metro">Metro</span>
+									<span class="col-growth"></span>
+								</div>
+								<div class="ranking-table-body">
+									<div 
+										v-for="(item, index) in homeValueData" 
+										:key="index" 
+										class="ranking-row"
+										@mouseenter="showTooltip($event, item, 'home_value')"
+										@mousemove="moveTooltip"
+										@mouseleave="hideTooltip"
+									>
+										<span class="col-zip">{{ item.zipcode }}</span>
+										<span class="col-city">{{ item.city }}</span>
+										<span class="col-metro">{{ item.metro }}</span>
+										<div class="col-growth">
+											<div class="growth-bar-container">
+												<div 
+													class="growth-bar" 
+													:style="{ width: ((item.value || 0) / maxHomeValueVal * 100) + '%', backgroundColor: getBarColor(index) }"
+												></div>
+												<span class="growth-text">${{ Math.round((item.value || 0) / 1000).toLocaleString() }}K</span>
+											</div>
+										</div>
+									</div>
+									<div v-if="homeValueData.length === 0" class="no-data">
+										No data available
+									</div>
+								</div>
+							</div>
+						</div>
 
 						<!-- Chart 4: Rent Ranking -->
-						<RentRanking
-							:data="rentData"
-							@showTooltip="showTooltip"
-							@moveTooltip="moveTooltip"
-							@hideTooltip="hideTooltip"
-						/>
+						<div class="chart-item">
+							<div class="chart-header">
+								<h3>Rent Ranking</h3>
+							</div>
+							<div class="chart-content">
+								<div class="ranking-table-header">
+									<span class="col-zip">Zipcode</span>
+									<span class="col-city">City</span>
+									<span class="col-metro">Metro</span>
+									<span class="col-growth"></span>
+								</div>
+								<div class="ranking-table-body">
+									<div 
+										v-for="(item, index) in rentData" 
+										:key="index" 
+										class="ranking-row"
+										@mouseenter="showTooltip($event, item, 'rent')"
+										@mousemove="moveTooltip"
+										@mouseleave="hideTooltip"
+									>
+										<span class="col-zip">{{ item.zipcode }}</span>
+										<span class="col-city">{{ item.city }}</span>
+										<span class="col-metro">{{ item.metro }}</span>
+										<div class="col-growth">
+											<div class="growth-bar-container">
+												<div 
+													class="growth-bar" 
+													:style="{ width: ((item.value || 0) / maxRentVal * 100) + '%', backgroundColor: getBarColor(index) }"
+												></div>
+												<span class="growth-text">${{ Math.round(item.value || 0).toLocaleString() }}</span>
+											</div>
+										</div>
+									</div>
+									<div v-if="rentData.length === 0" class="no-data">
+										No data available
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</ClientOnly>
@@ -186,10 +343,6 @@
 <script setup lang="ts">
 	import { getZipcodeMetrosList, getZipcodeList, growthRate, zipcodeRank } from "@/api/charts"
 	import { ref, onMounted, watch, computed } from 'vue'
-	import HomeValueGainRanking from '@/components/RankingCharts/HomeValueGainRanking.vue'
-	import RentToHomeValueRanking from '@/components/RankingCharts/RentToHomeValueRanking.vue'
-	import HomeValueRanking from '@/components/RankingCharts/HomeValueRanking.vue'
-	import RentRanking from '@/components/RankingCharts/RentRanking.vue'
 
 	const tabs = ['Metro','Home Value Gain', 'Rent to Home Value', 'Home Value', 'Rent']
 	const currentTab = ref('Metro')
@@ -215,6 +368,16 @@
 	const rentToValueData = ref<any[]>([])
 	const homeValueData = ref<any[]>([])
 	const rentData = ref<any[]>([])
+
+	const barColors = [
+		'#8884d8', '#8dd1e1', '#82ca9d', '#a4de6c', '#d0ed57', '#ffc658',
+		'#ff7300', '#ff0000', '#0088fe', '#00c49f', '#ffbb28', '#ff8042',
+		'#413ea0', '#f50057', '#7c4dff', '#00b0ff'
+	]
+
+	const getBarColor = (index: number) => {
+		return barColors[index % barColors.length]
+	}
 
 	// 搜索过滤方法
 	const filterMetros = (query: string) => {
@@ -338,6 +501,27 @@
 			console.error("Failed to fetch other charts data:", error)
 		}
 	}
+
+	// Computed Max Values for scaling
+	const maxGrowthVal = computed(() => {
+		if (!rankingData.value.length) return 1
+		return Math.max(...rankingData.value.map(item => Math.abs(item.growth_rate || 0))) || 1
+	})
+
+	const maxRentToValueVal = computed(() => {
+		if (!rentToValueData.value.length) return 1
+		return Math.max(...rentToValueData.value.map(item => Number(item.value) || 0)) || 1
+	})
+
+	const maxHomeValueVal = computed(() => {
+		if (!homeValueData.value.length) return 1
+		return Math.max(...homeValueData.value.map(item => Number(item.value) || 0)) || 1
+	})
+
+	const maxRentVal = computed(() => {
+		if (!rentData.value.length) return 1
+		return Math.max(...rentData.value.map(item => Number(item.value) || 0)) || 1
+	})
 
 	// Tooltip State
 	const tooltip = ref({
