@@ -40,6 +40,8 @@ onMounted(() => {
 	if (chartRef.value) {
 		chartInstance.value = echarts.init(chartRef.value)
 		window.addEventListener('resize', handleResize)
+		// Fetch data immediately upon mount
+		fetchData()
 	}
 })
 
@@ -145,7 +147,7 @@ const renderChart = () => {
 				const data = params.data || params; 
 				const seriesIndex = params.seriesIndex;
 				const itemData = chartData.value[seriesIndex];
-				
+				console.log('itemData----',itemData)
 				if (!itemData) return '';
 				
 				const year = params.name; 
