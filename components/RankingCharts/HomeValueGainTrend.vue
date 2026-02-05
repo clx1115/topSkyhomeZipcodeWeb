@@ -114,14 +114,7 @@ const renderChart = () => {
 		}
 
 		// Extract growth rates
-		const data = item.data.map((d: any) => ({
-			value: (d.growth_rate * 100).toFixed(2),
-			// Store metadata in data item for tooltip
-			metro: item.metro,
-			city: item.city,
-			zipcode: item.zipcode,
-			period: d.period
-		}))
+		const data = item.data.map((d: any) => (d.growth_rate * 100).toFixed(2)) // Convert to percentage
 
 		series.push({
 			name: name,
@@ -140,43 +133,13 @@ const renderChart = () => {
 
 	const option: echarts.EChartsOption = {
 		tooltip: {
-			trigger: 'item', // Trigger on item hover to show specific series details
-			backgroundColor: 'rgba(255, 255, 255, 0.95)',
-			borderColor: '#eee',
-			borderWidth: 1,
-			padding: [10, 15],
-			textStyle: {
-				color: '#333',
-				fontSize: 13
-			},
+			trigger: 'axis',
 			formatter: function (params: any) {
-				const data = params.data
-				if (!data) return ''
-				
-				return `
-					<div style="font-family: sans-serif; min-width: 200px;">
-						<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-							<span style="color: #666; margin-right: 15px;">Metro:</span>
-							<span style="font-weight: 500; text-align: right;">${data.metro || '-'}</span>
-						</div>
-						<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-							<span style="color: #666; margin-right: 15px;">City:</span>
-							<span style="font-weight: 500; text-align: right;">${data.city || '-'}</span>
-						</div>
-						<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-							<span style="color: #666; margin-right: 15px;">Zipcode:</span>
-							<span style="font-weight: 500; text-align: right;">${data.zipcode || '-'}</span>
-						</div>
-						<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-							<span style="color: #666; margin-right: 15px;">Year:</span>
-							<span style="font-weight: 500; text-align: right;">${data.period || params.name}</span>
-						</div>
-						<div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
-							<span style="color: #666; margin-right: 15px;">% Difference in Home Value:</span>
-							<span style="font-weight: 600; text-align: right;">${data.value}%</span>
-						</div>
-					</div>
-				`
+				let result = params[0].axisValue + '<br/>'
+				params.forEach((item: any) => {
+					result += `${item.marker} ${item.seriesName}: <b>${item.value}%</b><br/>`
+				})
+				return result
 			}
 		},
 		legend: {
@@ -187,7 +150,7 @@ const renderChart = () => {
 		grid: {
 			left: '3%',
 			right: '4%',
-			bottom: '40px', // Increase bottom margin for legend and x-axis
+			bottom: '10%',
 			top: '3%',
 			containLabel: true
 		},
@@ -227,7 +190,7 @@ const renderChart = () => {
 .trend-chart-container {
 	width: 100%;
 	height: 100%;
-	min-height: 450px;
+	min-height: 300px;
 	position: relative;
 	background: #fff;
 	border-radius: 8px;
