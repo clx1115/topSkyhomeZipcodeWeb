@@ -118,13 +118,12 @@
 					/>
 				</div>
 				<div class="chart-bottom">
-					<!-- Line Chart Placeholder -->
-					<div class="line-chart-placeholder">
-						<div class="placeholder-content">
-							<i class="el-icon-data-line"></i>
-							<span>Line Chart Module Placeholder</span>
-						</div>
-					</div>
+					<HomeValueGainTrend 
+						:baseYear="baseYear"
+						:currentYear="currentYear"
+						:selectedMetros="selectedMetros"
+						:selectedZipcodes="selectedZipcodes"
+					/>
 				</div>
 			</div>
 		</div>
@@ -133,6 +132,7 @@
 
 <script setup lang="ts">
 import HomeValueGainRanking from '@/components/RankingCharts/HomeValueGainRanking.vue'
+import HomeValueGainTrend from '@/components/RankingCharts/HomeValueGainTrend.vue'
 import { type PropType } from 'vue'
 
 defineProps({

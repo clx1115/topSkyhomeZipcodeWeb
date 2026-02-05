@@ -239,7 +239,7 @@
 	}
 
 	const fetchFilterData = async () => {
-		const allOption = "(All)"
+		const allOption = ""
 		
 		// 获取 Metro 列表
 		try {
