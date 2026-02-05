@@ -277,8 +277,7 @@ defineEmits([
 	background: #fff;
 	border-radius: 8px;
 	border: 1px solid #eee;
-	overflow: hidden;
-	min-height: 200px; /* Ensure minimum visibility */
+	min-height: 400px; /* Ensure minimum visibility */
 }
 
 .map-placeholder, .line-chart-placeholder {

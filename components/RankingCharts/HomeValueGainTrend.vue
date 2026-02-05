@@ -133,19 +133,84 @@ const renderChart = () => {
 
 	const option: echarts.EChartsOption = {
 		tooltip: {
-			trigger: 'axis',
+			trigger: 'item',
+			backgroundColor: 'rgba(255, 255, 255, 0.95)',
+			borderColor: '#eee',
+			borderWidth: 1,
+			textStyle: {
+				color: '#333'
+			},
+			extraCssText: 'box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 10px;',
 			formatter: function (params: any) {
-				let result = params[0].axisValue + '<br/>'
-				params.forEach((item: any) => {
-					result += `${item.marker} ${item.seriesName}: <b>${item.value}%</b><br/>`
-				})
-				return result
+				// params is an array of series data for the current axis value
+				// Since we want to show details for the hovered point, we iterate
+				// However, ECharts tooltip formatter with trigger 'axis' shows all series by default
+				// To match the screenshot which seems to show specific details for one point or summary
+				// But standard axis tooltip shows all. 
+				// The screenshot shows a single box with details: Metro, City, Zipcode, Year, % Difference
+				// This implies we might need to find which series is being hovered or show for all but formatted differently?
+				// Actually, the screenshot looks like it's showing details for the *closest* point or a specific series.
+				// But typically 'axis' trigger shows a list. 
+				// Let's stick to a clean list first, but format the X-axis label nicely.
+				// Wait, the user said "match image 2". Image 2 shows a specific box with Metro/City/Zipcode/Year/% Difference.
+				// This usually happens when you hover over a *specific line* (trigger: 'item') OR 
+				// if it's 'axis' trigger, it might be showing the top one or we need to customize.
+				// Let's look closely at the screenshot. It shows "Metro: ... City: ... Zipcode: ... Year: ... % Difference: ...".
+				// This suggests a single data point is the focus.
+				
+				// Let's try to improve the formatting to match the "clean" look first, 
+				// but keep 'axis' trigger as it's better for comparing lines.
+				// If the user insists on the exact box format for *one* item, we might need trigger: 'item'.
+				// But for now, let's format the X-axis label (Year/Quarter) and the list values.
+				
+				// Re-reading: "Interface return format... change to image 2 can show quarter and this page height bigger"
+				// "Show quarter" -> X axis label formatting.
+				// "Page height bigger" -> CSS change.
+				// The tooltip in image 2 is quite specific. It shows metadata (Metro/City/Zipcode) which is per-series.
+				// If we use 'axis' trigger, we have multiple series. Showing Metro/City/Zipcode for *each* would be huge.
+				// The screenshot shows *one* box. This implies either only one series is hovered (trigger: 'item') 
+				// or the tooltip is customized to show the "active" one.
+				
+				// Let's try trigger: 'item' to match the screenshot's single-item detail view.
+				const data = params.data || params; // ECharts structure varies slightly
+				const seriesIndex = params.seriesIndex;
+				const itemData = chartData.value[seriesIndex]; // We need to map back to source data
+				
+				if (!itemData) return '';
+				
+				const year = params.name; // X-axis value (period)
+				const val = params.value;
+				
+				return `
+					<div style="font-size: 12px; line-height: 1.5;">
+						<div style="display:flex; justify-content:space-between; gap: 20px;">
+							<span style="color:#666">Metro:</span>
+							<span style="font-weight:500; text-align:right">${itemData.metro}</span>
+						</div>
+						<div style="display:flex; justify-content:space-between; gap: 20px;">
+							<span style="color:#666">City:</span>
+							<span style="font-weight:500; text-align:right">${itemData.city}</span>
+						</div>
+						<div style="display:flex; justify-content:space-between; gap: 20px;">
+							<span style="color:#666">Zipcode:</span>
+							<span style="font-weight:500; text-align:right">${itemData.zipcode}</span>
+						</div>
+						<div style="display:flex; justify-content:space-between; gap: 20px;">
+							<span style="color:#666">Year:</span>
+							<span style="font-weight:500; text-align:right">${year}</span>
+						</div>
+						<div style="display:flex; justify-content:space-between; gap: 20px; margin-top: 4px;">
+							<span style="color:#666">% Difference in Home Value:</span>
+							<span style="font-weight:500; text-align:right">${val}%</span>
+						</div>
+					</div>
+				`;
 			}
 		},
 		legend: {
 			data: legends,
 			bottom: 0,
-			type: 'scroll' // Handle many legends
+			type: 'scroll'
 		},
 		grid: {
 			left: '3%',
@@ -157,7 +222,7 @@ const renderChart = () => {
 		xAxis: {
 			type: 'category',
 			boundaryGap: false,
-			data: periods,
+			data: periods.map(p => p.replace('-', ' ')), // Format "2024-Q1" to "2024 Q1"
 			axisLabel: {
 				color: '#666'
 			},
@@ -190,7 +255,7 @@ const renderChart = () => {
 .trend-chart-container {
 	width: 100%;
 	height: 100%;
-	min-height: 300px;
+	min-height: 450px;
 	position: relative;
 	background: #fff;
 	border-radius: 8px;
