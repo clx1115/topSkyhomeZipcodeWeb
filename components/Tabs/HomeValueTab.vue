@@ -162,207 +162,197 @@ defineEmits([
 
 <style scoped lang="scss">
 .home-value-tab {
-	height: 100%;
+	padding: 20px 40px;
+	height: calc(100vh - 160px);
+	min-height: 600px;
 	display: flex;
 	flex-direction: column;
-	overflow: hidden;
+}
 
-	.filter-header {
-		flex: 0 0 auto;
+.filter-header {
+	margin-bottom: 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+
+	.section-title {
+		font-size: 20px;
+		font-weight: 600;
+		color: #333;
+	}
+
+	.controls {
 		display: flex;
-		justify-content: space-between;
+		gap: 20px;
 		align-items: center;
-		padding: 10px 0;
-		border-bottom: 1px solid #eee;
-		margin-bottom: 15px;
 
-		.section-title {
-			font-size: 18px;
-			font-weight: 600;
-			color: #333;
-		}
-
-		.controls {
+		.control-item {
 			display: flex;
-			gap: 15px;
-			align-items: center;
+			flex-direction: column;
+			gap: 5px;
 
-			.control-item {
-				display: flex;
-				flex-direction: row;
-				align-items: center;
-				gap: 8px;
+			.label {
+				font-size: 12px;
+				color: #666;
+			}
 
-				.label {
-					font-size: 14px;
-					color: #333;
-					white-space: nowrap;
-				}
+			/* Fix for Metro dropdown height and tag positioning */
+			:deep(.el-select__wrapper) {
+				min-height: 32px !important;
+				height: 32px !important;
+				padding: 0 8px !important;
+			}
+			
+			:deep(.el-select__tags) {
+				height: 32px;
+				top: 50%;
+				transform: translateY(-50%);
+			}
 
-				/* Fix for Metro dropdown height and tag positioning */
-				:deep(.el-select__wrapper) {
-					min-height: 32px !important;
-					height: 32px !important;
-					padding: 0 8px !important;
-				}
-				
-				:deep(.el-select__tags) {
-					position: absolute !important;
-					top: 0 !important;
-					bottom: 0 !important;
-					transform: none !important;
-					margin: 0 !important;
-					display: flex !important;
-					flex-wrap: nowrap !important;
-					align-items: center !important;
-					overflow: hidden !important;
-					max-width: calc(100% - 30px) !important;
-				}
-
-				:deep(.el-select__tags > span) {
-					display: flex !important;
-					align-items: center !important;
-					flex-wrap: nowrap !important;
-				}
-
-				:deep(.el-tag) {
-					display: inline-flex !important;
-					align-items: center !important;
-					justify-content: center !important;
-					height: 22px !important;
-					line-height: 22px !important;
-					margin: 0 2px !important;
-					padding: 0 4px !important;
-					box-sizing: border-box !important;
-				}
-
-				:deep(.el-tag__content) {
-					display: inline-block !important;
-					max-width: 70px !important;
-					overflow: hidden !important;
-					text-overflow: ellipsis !important;
-					white-space: nowrap !important;
-				}
-
-				:deep(.el-tag__close) {
-					margin-left: 2px !important;
-				}
+			:deep(.el-tag) {
+				margin-top: 2px !important;
+				margin-bottom: 2px !important;
 			}
 		}
 	}
+}
 
-	.content-container {
-		flex: 1;
-		display: flex;
-		gap: 20px;
-		overflow-y: auto;
-		padding-right: 5px; /* Space for scrollbar */
-	}
+.content-container {
+	flex: 1;
+	display: flex;
+	gap: 20px;
+	min-height: 0; /* Important for nested scrolling */
 
 	.left-panel {
 		flex: 1;
-		min-width: 0;
+		background: #f5f7fa;
+		border-radius: 8px;
 		display: flex;
-		flex-direction: column;
-
+		align-items: center;
+		justify-content: center;
+		border: 1px dashed #ccc;
+		
 		.map-placeholder {
-			flex: 1;
-			background: #f5f7fa;
-			border-radius: 8px;
+			width: 100%;
+			height: 100%;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			border: 2px dashed #dcdfe6;
-			min-height: 400px;
-
+			
 			.placeholder-content {
-				text-align: center;
-				color: #909399;
-
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 10px;
+				color: #999;
+				
 				i {
 					font-size: 48px;
-					margin-bottom: 10px;
-					display: block;
+				}
+				
+				span {
+					font-size: 16px;
 				}
 			}
 		}
 	}
 
 	.right-panel {
-		width: 40%;
-		min-width: 400px;
+		flex: 1;
 		display: flex;
 		flex-direction: column;
 		gap: 20px;
-	}
+		min-width: 0; /* Prevent flex overflow */
 
-	.chart-top {
-		flex: 0 0 auto;
-	}
-
-	.chart-bottom {
-		flex: 0 0 auto;
-		background: #fff;
-		border-radius: 8px;
-		padding-top: 10px;
-
-		.chart-header-row {
+		.chart-top {
+			flex: 1;
+			min-height: 0;
+			background: #fff;
+			border-radius: 8px;
+			// border: 1px solid #eee;
+			// padding: 15px;
 			display: flex;
-			justify-content: space-between;
-			align-items: flex-end;
-			margin-bottom: 10px;
-			flex-wrap: wrap;
-			gap: 10px;
+			flex-direction: column;
+		}
 
-			.chart-title {
-				font-size: 14px;
-				font-weight: 600;
-				color: #666;
-			}
-
-			.chart-controls {
+		.chart-bottom {
+			flex: 1;
+			min-height: 0;
+			background: #fff;
+			border-radius: 8px;
+			border: 1px solid #eee;
+			padding: 15px;
+			display: flex;
+			flex-direction: column;
+			
+			.chart-header-row {
 				display: flex;
-				gap: 10px;
-
-				.mini-control {
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 10px;
+				
+				.chart-title {
+					font-size: 16px;
+					font-weight: 600;
+					color: #333;
+				}
+				
+				.chart-controls {
+					display: flex;
+					gap: 15px;
+					
+					.mini-control {
+						display: flex;
+						align-items: center;
+						gap: 8px;
+						
+						.label {
+							font-size: 12px;
+							color: #666;
+						}
+					}
+				}
+			}
+			
+			.line-chart-placeholder {
+				flex: 1;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: #f9f9f9;
+				border-radius: 4px;
+				
+				.placeholder-content {
 					display: flex;
 					flex-direction: column;
-					gap: 2px;
-
-					.label {
-						font-size: 12px;
-						color: #333;
+					align-items: center;
+					gap: 10px;
+					color: #999;
+					
+					i {
+						font-size: 32px;
+					}
+					
+					span {
+						font-size: 14px;
 					}
 				}
 			}
 		}
-
-		.line-chart-placeholder {
-			height: 300px;
-			background: #f5f7fa;
-			border-radius: 8px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			border: 2px dashed #dcdfe6;
-
-			.placeholder-content {
-				text-align: center;
-				color: #909399;
-
-				i {
-					font-size: 32px;
-					margin-bottom: 8px;
-					display: block;
-				}
-			}
-		}
 	}
+}
 
-	.custom-option-item {
-		display: flex;
-		align-items: center;
-		padding: 5px 0;
-	}
+/* Custom Option Styles */
+.custom-option-item {
+	display: flex;
+	align-items: center;
+	width: 100%;
+}
+
+.option-text {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 </style>
