@@ -69,6 +69,8 @@ const tooltip = ref({
 	data: null as any
 })
 
+const hoveredSeriesIndex = ref<number>(-1)
+
 let hideTooltipTimer: any = null
 
 const handleMouseMove = (event: MouseEvent) => {
@@ -92,6 +94,18 @@ const handleMouseMove = (event: MouseEvent) => {
 	
 	tooltip.value.left = left
 	tooltip.value.top = top
+
+	// Dynamically resolve data point if hovering a series
+	if (hoveredSeriesIndex.value !== -1 && chartInstance.value && chartData.value[hoveredSeriesIndex.value]) {
+		const xIndex = chartInstance.value.convertFromPixel({ xAxisIndex: 0 }, [x, y])
+		const itemData = chartData.value[hoveredSeriesIndex.value]
+		
+		if (itemData.data && itemData.data[xIndex]) {
+			const pointData = itemData.data[xIndex]
+			tooltip.value.data.year = pointData.period
+			tooltip.value.data.val = (pointData.growth_rate * 100).toFixed(2)
+		}
+	}
 }
 
 const handleMouseLeave = () => {
@@ -113,29 +127,19 @@ onMounted(() => {
 				}
 				
 				const seriesIndex = params.seriesIndex
-				const dataIndex = params.dataIndex
+				hoveredSeriesIndex.value = seriesIndex
 				
 				if (chartData.value && chartData.value[seriesIndex]) {
 					const itemData = chartData.value[seriesIndex]
 					
-					// Try to get specific point data
-					let year = params.name
-					let val = params.value
-					
-					// If hovering line (triggerLineEvent), params.name/value might be generic or missing
-					// Attempt to resolve from data array if available
-					if ((!year || val === undefined) && itemData.data && itemData.data[dataIndex]) {
-						const pointData = itemData.data[dataIndex]
-						year = pointData.period
-						val = (pointData.growth_rate * 100).toFixed(2)
-					}
-					
+					// Initial data setup (Metro/City/Zip are constant for the line)
+					// Year/Val will be updated by mousemove immediately
 					tooltip.value.data = {
 						metro: itemData.metro || '-',
 						city: itemData.city || '-',
 						zipcode: itemData.zipcode || '-',
-						year: year || '-',
-						val: val !== undefined ? val : '-'
+						year: params.name || '-', 
+						val: params.value !== undefined ? params.value : '-'
 					}
 					tooltip.value.visible = true
 				}
@@ -144,6 +148,7 @@ onMounted(() => {
 
 		chartInstance.value.on('mouseout', (params: any) => {
 			if (params.componentType === 'series') {
+				hoveredSeriesIndex.value = -1 // Stop tracking data updates
 				hideTooltipTimer = setTimeout(() => {
 					tooltip.value.visible = false
 				}, 100)
