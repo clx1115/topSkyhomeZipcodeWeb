@@ -304,4 +304,31 @@ defineEmits([
 	align-items: center;
 	padding: 5px 0;
 }
+
+/* Fix for Metro dropdown height and tag positioning */
+:deep(.el-select__wrapper) {
+	min-height: 32px !important;
+	height: 32px !important;
+	padding: 0 8px !important;
+}
+
+:deep(.el-select__tags) {
+	height: 32px;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+:deep(.el-tag) {
+	margin-top: 2px !important;
+	margin-bottom: 2px !important;
+}
+
+:deep(.el-select__tags-text) {
+    display: inline-block;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
 </style>

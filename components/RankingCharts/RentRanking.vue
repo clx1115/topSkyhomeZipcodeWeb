@@ -107,7 +107,7 @@ const getBarColor = (index: number) => {
 }
 
 .ranking-table-body {
-	max-height: 480px;
+	max-height: 600px;
 	overflow-y: auto;
 	
 	/* Custom scrollbar */

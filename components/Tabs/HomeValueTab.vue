@@ -164,7 +164,7 @@ defineEmits([
 .home-value-tab {
 	padding: 20px 40px;
 	height: calc(100vh - 160px);
-	min-height: 600px;
+	min-height: 900px;
 	display: flex;
 	flex-direction: column;
 }
@@ -354,5 +354,32 @@ defineEmits([
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+/* Fix for Metro dropdown height and tag positioning */
+:deep(.el-select__wrapper) {
+	min-height: 32px !important;
+	height: 32px !important;
+	padding: 0 8px !important;
+}
+
+:deep(.el-select__tags) {
+	height: 32px;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+:deep(.el-tag) {
+	margin-top: 2px !important;
+	margin-bottom: 2px !important;
+}
+
+:deep(.el-select__tags-text) {
+    display: inline-block;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 </style>
