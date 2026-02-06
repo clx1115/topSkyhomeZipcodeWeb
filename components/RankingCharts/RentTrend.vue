@@ -105,8 +105,8 @@ const fetchData = async () => {
 		const result = await response.json()
 		
 		if (result.status === 200 && result.data) {
-			// Limit to top 15 items to prevent overcrowding
-			chartData.value = result.data.slice(0, 15)
+			// Limit to top 50 items to prevent overcrowding
+			chartData.value = result.data.slice(0, 50)
 			renderChart()
 		} else {
 			chartData.value = []
