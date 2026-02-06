@@ -163,8 +163,7 @@ defineEmits([
 <style scoped lang="scss">
 .home-value-tab {
 	padding: 20px 40px;
-	height: calc(100vh - 160px);
-	min-height: 900px;
+	min-height: calc(100vh - 160px);
 	display: flex;
 	flex-direction: column;
 }
@@ -221,7 +220,6 @@ defineEmits([
 	flex: 1;
 	display: flex;
 	gap: 20px;
-	min-height: 0; /* Important for nested scrolling */
 
 	.left-panel {
 		flex: 1;

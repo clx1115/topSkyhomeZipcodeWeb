@@ -158,8 +158,7 @@ defineEmits([
 <style scoped lang="scss">
 .home-value-gain-tab {
 	padding: 20px 40px;
-	height: calc(100vh - 160px); /* Adjust based on header height */
-	min-height: 600px;
+	min-height: calc(100vh - 160px);
 	display: flex;
 	flex-direction: column;
 }
@@ -247,8 +246,6 @@ defineEmits([
 	display: flex;
 	gap: 20px;
 	flex: 1;
-	min-height: 0; /* Important for nested scrolling */
-	overflow-y: auto; /* Allow scrolling if content is too tall */
 }
 
 .left-panel {
