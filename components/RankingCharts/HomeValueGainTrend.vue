@@ -1,34 +1,8 @@
 <template>
-	<div class="trend-chart-container" v-loading="loading" @mousemove="handleMouseMove" @mouseleave="handleMouseLeave">
+	<div class="trend-chart-container" v-loading="loading">
 		<div ref="chartRef" class="chart-instance"></div>
 		<div v-if="!loading && (!chartData || chartData.length === 0)" class="no-data-overlay">
 			No trend data available
-		</div>
-		
-		<!-- Custom Tooltip -->
-		<div v-if="tooltip.visible && tooltip.data" class="custom-trend-tooltip" :style="{ top: tooltip.top + 'px', left: tooltip.left + 'px' }">
-			<div class="tooltip-header">
-				<span class="label">Metro</span>
-				<span class="value">{{ tooltip.data.metro }}</span>
-			</div>
-			<div class="tooltip-row">
-				<span class="label">City</span>
-				<span class="value">{{ tooltip.data.city }}</span>
-			</div>
-			<div class="tooltip-row">
-				<span class="label">Zipcode</span>
-				<span class="value">{{ tooltip.data.zipcode }}</span>
-			</div>
-			<div class="tooltip-row">
-				<span class="label">Year</span>
-				<span class="value">{{ tooltip.data.year }}</span>
-			</div>
-			<div class="tooltip-footer">
-				<span class="label">% Difference</span>
-				<span class="value" :class="{ 'positive': tooltip.data.val >= 0, 'negative': tooltip.data.val < 0 }">
-					{{ tooltip.data.val }}%
-				</span>
-			</div>
 		</div>
 	</div>
 </template>
@@ -61,154 +35,8 @@ const chartInstance = shallowRef<echarts.ECharts | null>(null)
 const loading = ref(false)
 const chartData = ref<any[]>([])
 
-// Tooltip State
-const tooltip = ref({
-	visible: false,
-	top: 0,
-	left: 0,
-	data: null as any
-})
-
+const lastMouseY = ref(0)
 const hoveredSeriesIndex = ref<number>(-1)
-const hoveredDataIndex = ref<number>(-1)
-
-let hideTooltipTimer: any = null
-
-const handleMouseMove = (event: MouseEvent) => {
-	if (!chartRef.value) return
-	
-	const rect = chartRef.value.getBoundingClientRect()
-	const x = event.clientX - rect.left
-	const y = event.clientY - rect.top
-	
-	// Offset logic
-	let left = x + 20
-	let top = y + 20
-	
-	// Boundary check (simple)
-	if (left + 280 > rect.width) {
-		left = x - 300 // flip to left
-	}
-	if (top + 200 > rect.height) {
-		top = y - 220 // flip to top
-	}
-	
-	tooltip.value.left = left
-	tooltip.value.top = top
-
-	// Dynamically resolve data point if hovering a series
-	if (hoveredSeriesIndex.value !== -1 && chartInstance.value && chartData.value[hoveredSeriesIndex.value]) {
-		const pixelResult = chartInstance.value.convertFromPixel({ xAxisIndex: 0 }, [x, y])
-		const xIndex = Array.isArray(pixelResult) ? pixelResult[0] : pixelResult
-		const itemData = chartData.value[hoveredSeriesIndex.value]
-		
-		// Safety check for data existence
-		if (itemData && itemData.data && itemData.data.length > 0) {
-			// Ensure xIndex is within bounds
-			let safeIndex = typeof xIndex === 'number' ? Math.round(xIndex) : 0
-			if (safeIndex < 0) safeIndex = 0
-			if (safeIndex >= itemData.data.length) safeIndex = itemData.data.length - 1
-			
-			// Highlight the specific data point and show its symbol
-			if (hoveredDataIndex.value !== safeIndex) {
-				// Hide previous point's symbol
-				if (hoveredDataIndex.value !== -1 && chartInstance.value) {
-					chartInstance.value.dispatchAction({
-						type: 'downplay',
-						seriesIndex: hoveredSeriesIndex.value,
-						dataIndex: hoveredDataIndex.value
-					})
-					
-					// Update previous point to hide symbol
-					const option = chartInstance.value.getOption() as any
-					if (option.series && option.series[hoveredSeriesIndex.value] && 
-						option.series[hoveredSeriesIndex.value].data && 
-						Array.isArray(option.series[hoveredSeriesIndex.value].data)) {
-						const newData = [...option.series[hoveredSeriesIndex.value].data]
-						const prevPoint = { ...newData[hoveredDataIndex.value] }
-						if (prevPoint && typeof prevPoint === 'object') {
-							prevPoint.symbolSize = 0
-							prevPoint.itemStyle = { opacity: 0 }
-							newData[hoveredDataIndex.value] = prevPoint
-							const seriesUpdate: any = {}
-							seriesUpdate[`series.${hoveredSeriesIndex.value}.data`] = newData
-							chartInstance.value.setOption(seriesUpdate, false)
-						}
-					}
-				}
-				
-				// Show new point's symbol - use direct update method
-				const option = chartInstance.value.getOption() as any
-				if (option.series && option.series[hoveredSeriesIndex.value] && 
-					option.series[hoveredSeriesIndex.value].data && 
-					Array.isArray(option.series[hoveredSeriesIndex.value].data)) {
-					// Create a new data array with updated point
-					const newData = [...option.series[hoveredSeriesIndex.value].data]
-					const currentPoint = { ...newData[safeIndex] }
-					currentPoint.symbolSize = 14
-					currentPoint.itemStyle = {
-						opacity: 1,
-						borderColor: '#fff',
-						borderWidth: 2
-					}
-					newData[safeIndex] = currentPoint
-					
-					// Update only the specific series
-					const seriesUpdate: any = {}
-					seriesUpdate[`series.${hoveredSeriesIndex.value}.data`] = newData
-					chartInstance.value.setOption(seriesUpdate, false)
-				}
-				
-				// Also dispatch highlight action
-				chartInstance.value.dispatchAction({
-					type: 'highlight',
-					seriesIndex: hoveredSeriesIndex.value,
-					dataIndex: safeIndex
-				})
-				
-				hoveredDataIndex.value = safeIndex
-			}
-
-			const pointData = itemData.data[safeIndex]
-			if (pointData) {
-				tooltip.value.data.year = pointData.period
-				tooltip.value.data.val = (pointData.growth_rate * 100).toFixed(2)
-			}
-		}
-	}
-}
-
-const handleMouseLeave = () => {
-	tooltip.value.visible = false
-	// Clear highlight and hide symbol
-	if (hoveredSeriesIndex.value !== -1 && hoveredDataIndex.value !== -1 && chartInstance.value) {
-		chartInstance.value.dispatchAction({
-			type: 'downplay',
-			seriesIndex: hoveredSeriesIndex.value,
-			dataIndex: hoveredDataIndex.value
-		})
-		
-		// Hide the point's symbol
-		const option = chartInstance.value.getOption() as any
-		if (option.series && option.series[hoveredSeriesIndex.value] && 
-			option.series[hoveredSeriesIndex.value].data && 
-			Array.isArray(option.series[hoveredSeriesIndex.value].data)) {
-			const newData = [...option.series[hoveredSeriesIndex.value].data]
-			const point = { ...newData[hoveredDataIndex.value] }
-			if (point && typeof point === 'object') {
-				point.symbolSize = 0
-				point.itemStyle = { opacity: 0 }
-				newData[hoveredDataIndex.value] = point
-				const seriesUpdate: any = {}
-				seriesUpdate[`series.${hoveredSeriesIndex.value}.data`] = newData
-				chartInstance.value.setOption(seriesUpdate, false)
-			}
-		}
-		
-		hoveredDataIndex.value = -1
-		hoveredSeriesIndex.value = -1
-	}
-}
 
 // Initialize chart
 onMounted(() => {
@@ -216,120 +44,20 @@ onMounted(() => {
 		chartInstance.value = echarts.init(chartRef.value)
 		window.addEventListener('resize', handleResize)
 		
-		// Event listeners for custom tooltip
+		// Track mouse Y position for magnetic tooltip
+		chartInstance.value.getZr().on('mousemove', (params: any) => {
+			lastMouseY.value = params.offsetY
+		})
+
+		// Track hovered series
 		chartInstance.value.on('mouseover', (params: any) => {
 			if (params.componentType === 'series') {
-				if (hideTooltipTimer) {
-					clearTimeout(hideTooltipTimer)
-					hideTooltipTimer = null
-				}
-				
-				const seriesIndex = params.seriesIndex
-				hoveredSeriesIndex.value = seriesIndex
-				
-				if (chartData.value && chartData.value[seriesIndex]) {
-					const itemData = chartData.value[seriesIndex]
-					
-					// Default to '-'
-					let year = '-'
-					let val = '-'
-					let targetIndex = -1
-
-					// If we hit a specific point (symbol), use its data
-					if (params.dataIndex !== undefined && itemData.data[params.dataIndex]) {
-						targetIndex = params.dataIndex
-						const pointData = itemData.data[params.dataIndex]
-						year = pointData.period
-						val = (pointData.growth_rate * 100).toFixed(2)
-					} 
-					// If we hit the line, try to resolve from mouse position immediately
-					else if (params.event && params.event.offsetX && chartInstance.value) {
-						const x = params.event.offsetX
-						const y = params.event.offsetY
-						const pixelResult = chartInstance.value.convertFromPixel({ xAxisIndex: 0 }, [x, y])
-						const xIndex = Array.isArray(pixelResult) ? pixelResult[0] : pixelResult
-						const safeIndex = typeof xIndex === 'number' ? Math.round(xIndex) : -1
-						
-						if (safeIndex >= 0 && safeIndex < itemData.data.length && itemData.data[safeIndex]) {
-							targetIndex = safeIndex
-							const pointData = itemData.data[safeIndex]
-							year = pointData.period
-							val = (pointData.growth_rate * 100).toFixed(2)
-						}
-					}
-
-					// Show the point's symbol if we have a valid index
-					if (targetIndex >= 0 && chartInstance.value) {
-						const option = chartInstance.value.getOption() as any
-						if (option.series && option.series[seriesIndex] && 
-							option.series[seriesIndex].data && 
-							Array.isArray(option.series[seriesIndex].data)) {
-							const newData = [...option.series[seriesIndex].data]
-							const point = { ...newData[targetIndex] }
-							if (point && typeof point === 'object') {
-								point.symbolSize = 14
-								point.itemStyle = {
-									opacity: 1,
-									borderColor: '#fff',
-									borderWidth: 2
-								}
-								newData[targetIndex] = point
-								const seriesUpdate: any = {}
-								seriesUpdate[`series.${seriesIndex}.data`] = newData
-								chartInstance.value.setOption(seriesUpdate, false)
-								hoveredDataIndex.value = targetIndex
-							}
-						}
-					}
-
-					tooltip.value.data = {
-						metro: itemData.metro || '-',
-						city: itemData.city || '-',
-						zipcode: itemData.zipcode || '-',
-						year: year,
-						val: val
-					}
-					tooltip.value.visible = true
-				}
+				hoveredSeriesIndex.value = params.seriesIndex
 			}
 		})
 
-		chartInstance.value.on('mouseout', (params: any) => {
-			if (params.componentType === 'series') {
-				// Delay resetting index to handle smooth transition between symbol and line
-				hideTooltipTimer = setTimeout(() => {
-					// Clear point highlight and hide symbol
-					if (hoveredDataIndex.value !== -1 && chartInstance.value) {
-						chartInstance.value.dispatchAction({
-							type: 'downplay',
-							seriesIndex: hoveredSeriesIndex.value,
-							dataIndex: hoveredDataIndex.value
-						})
-						
-						// Hide the point's symbol
-						const option = chartInstance.value.getOption() as any
-						if (option.series && option.series[hoveredSeriesIndex.value] && 
-							option.series[hoveredSeriesIndex.value].data && 
-							Array.isArray(option.series[hoveredSeriesIndex.value].data)) {
-							const point = option.series[hoveredSeriesIndex.value].data[hoveredDataIndex.value]
-							if (point && typeof point === 'object') {
-								point.symbolSize = 0
-								if (point.itemStyle) {
-									point.itemStyle.opacity = 0
-								} else {
-									point.itemStyle = { opacity: 0 }
-								}
-								chartInstance.value.setOption(option, false)
-							}
-						}
-						
-						hoveredDataIndex.value = -1
-					}
-					
-					hoveredSeriesIndex.value = -1 
-					tooltip.value.visible = false
-				}, 100)
-			}
+		chartInstance.value.on('mouseout', () => {
+			hoveredSeriesIndex.value = -1
 		})
 		
 		// Fetch data immediately upon mount
@@ -408,50 +136,121 @@ const renderChart = () => {
 			periods = item.data.map((d: any) => d.period)
 		}
 
-		// Extract growth rates and create data array with symbol configuration
-		const dataWithSymbols = item.data.map((d: any) => ({
-			value: parseFloat((d.growth_rate * 100).toFixed(2)), // Convert to percentage as number
-			symbol: 'circle',
-			symbolSize: 0, // Hidden by default
-			itemStyle: {
-				opacity: 0
-			}
-		}))
+		// Extract growth rates as simple numbers
+		const data = item.data.map((d: any) => parseFloat((d.growth_rate * 100).toFixed(2)))
 
 		series.push({
 			name: name,
 			type: 'line',
-			data: dataWithSymbols,
+			data: data,
 			smooth: true,
-			showSymbol: true, // Enable symbols
+			showSymbol: false, 
 			symbol: 'circle',
-			symbolSize: 0, // Default hidden
-			triggerLineEvent: true, // Enable hover on the line itself
-			itemStyle: {
-				opacity: 0 // Invisible normally
+			symbolSize: 8,
+			triggerLineEvent: true,
+			lineStyle: {
+				width: 2
 			},
 			emphasis: {
 				focus: 'series',
-				showSymbol: true,
-				symbolSize: 12,
+				showSymbol: true, 
 				itemStyle: {
-					opacity: 1,
 					borderColor: '#fff',
 					borderWidth: 2,
 					shadowBlur: 8,
 					shadowColor: 'rgba(0, 0, 0, 0.3)'
+				},
+				lineStyle: {
+					width: 3
 				}
-			},
-			lineStyle: {
-				width: 2
 			}
 		})
 	})
 
 	const option: echarts.EChartsOption = {
 		tooltip: {
-			show: false, // Disable native tooltip
-			trigger: 'item'
+			show: true,
+			trigger: 'axis',
+			confine: true,
+			padding: 0,
+			borderWidth: 0,
+			backgroundColor: 'transparent',
+			formatter: (params: any) => {
+				if (!Array.isArray(params)) {
+					params = [params]
+				}
+				
+				if (params.length === 0) return ''
+
+				let targetParam = params[0]
+				
+				// 1. Priority: Explicitly hovered series
+				if (hoveredSeriesIndex.value !== -1) {
+					const found = params.find((p: any) => p.seriesIndex === hoveredSeriesIndex.value)
+					if (found) targetParam = found
+				} else if (chartInstance.value) {
+					// 2. Fallback: Find closest point to mouse Y (Magnetic Tooltip)
+					let minDiff = Number.MAX_VALUE
+					
+					// Iterate all points at this X-axis index
+					for (const p of params) {
+						// Convert data point to pixel coordinates
+						// seriesIndex identifies the line, dataIndex identifies the point on the line
+						// p.value is [index, value] or just value depending on setup. For line chart category axis, p.value is the Y value.
+						// We need to use convertToPixel with the data index (X) and value (Y)
+						try {
+							// p.dataIndex is the index on x-axis
+							// p.value is the y-value
+							const point = chartInstance.value.convertToPixel(
+								{ seriesIndex: p.seriesIndex }, 
+								[p.dataIndex, p.value]
+							)
+							
+							if (point) {
+								const diff = Math.abs(point[1] - lastMouseY.value)
+								if (diff < minDiff) {
+									minDiff = diff
+									targetParam = p
+								}
+							}
+						} catch (e) {
+							// Ignore conversion errors
+						}
+					}
+				}
+				
+				const seriesIndex = targetParam.seriesIndex
+				const itemData = chartData.value[seriesIndex]
+				const year = targetParam.name
+				const val = targetParam.value
+				
+				const diffClass = val >= 0 ? 'color: #f56c6c;' : 'color: #67c23a;'
+				
+				return `
+					<div style="background: rgba(255, 255, 255, 0.95); border: 1px solid #ebeef5; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; padding: 12px; font-family: sans-serif; min-width: 240px;">
+						<div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #ebeef5;">
+							<span style="color: #909399; font-size: 12px;">Metro</span>
+							<span style="color: #606266; font-weight: 500; margin-left: 15px; text-align: right;">${itemData.metro || '-'}</span>
+						</div>
+						<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+							<span style="color: #909399; font-size: 12px;">City</span>
+							<span style="color: #606266; font-weight: 500;">${itemData.city || '-'}</span>
+						</div>
+						<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+							<span style="color: #909399; font-size: 12px;">Zipcode</span>
+							<span style="color: #606266; font-weight: 500;">${itemData.zipcode || '-'}</span>
+						</div>
+						<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+							<span style="color: #909399; font-size: 12px;">Year</span>
+							<span style="color: #606266; font-weight: 500;">${year || '-'}</span>
+						</div>
+						<div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid #ebeef5;">
+							<span style="color: #909399; font-size: 12px;">% Difference</span>
+							<span style="font-weight: 500; ${diffClass}">${val}%</span>
+						</div>
+					</div>
+				`
+			}
 		},
 		legend: {
 			data: legends,
@@ -530,16 +329,18 @@ const renderChart = () => {
 /* Custom Tooltip Styles */
 .custom-trend-tooltip {
 	position: absolute;
-	z-index: 100;
-	background: rgba(255, 255, 255, 0.95);
+	z-index: 1000;
+	background: #fff;
 	border: 1px solid #ebeef5;
 	box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 	border-radius: 8px;
 	padding: 12px;
 	min-width: 280px;
+	max-width: 300px;
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 	pointer-events: none; /* Important: allow mouse events to pass through to chart */
-	transition: top 0.1s ease, left 0.1s ease;
+	transition: opacity 0.2s ease;
+	white-space: nowrap;
 }
 
 .tooltip-header {
