@@ -239,7 +239,7 @@
 	}
 
 	const fetchFilterData = async () => {
-		const allOption = ""
+		const allOption = "all"
 		
 		// 获取 Metro 列表
 		try {
@@ -293,8 +293,8 @@
 	const fetchRankingData = async () => {
 		try {
 			// 处理参数
-			const metros = selectedMetros.value.includes('(All)') ? '' : selectedMetros.value.join(',')
-			const zipcodes = selectedZipcodes.value.includes('(All)') ? '' : selectedZipcodes.value.join(',')
+			const metros = (selectedMetros.value.includes('all') || selectedMetros.value.includes('(All)')) ? '' : selectedMetros.value.join(',')
+			const zipcodes = (selectedZipcodes.value.includes('all') || selectedZipcodes.value.includes('(All)')) ? '' : selectedZipcodes.value.join(',')
 			
 			const params = {
 				base_year: rankingBaseYear.value,
@@ -314,8 +314,8 @@
 
 	const fetchOtherChartsData = async () => {
 		try {
-			const metros = selectedMetros.value.includes('(All)') ? '' : selectedMetros.value.join(',')
-			const zipcodes = selectedZipcodes.value.includes('(All)') ? '' : selectedZipcodes.value.join(',')
+			const metros = (selectedMetros.value.includes('all') || selectedMetros.value.includes('(All)')) ? '' : selectedMetros.value.join(',')
+			const zipcodes = (selectedZipcodes.value.includes('all') || selectedZipcodes.value.includes('(All)')) ? '' : selectedZipcodes.value.join(',')
 			const baseParams = {
 				metro: metros,
 				zipcode: zipcodes,

@@ -90,8 +90,8 @@ const fetchData = async () => {
 			current_year: props.currentYear,
 			date_type: 'year',
 			type: 'home_value',
-			metro: props.selectedMetros.join(','),
-			zipcode: props.selectedZipcodes.join(','),
+			metro: (props.selectedMetros.includes('all') || props.selectedMetros.includes('(All)')) ? '' : props.selectedMetros.join(','),
+			zipcode: (props.selectedZipcodes.includes('all') || props.selectedZipcodes.includes('(All)')) ? '' : props.selectedZipcodes.join(','),
 			limit: 50
 		}
 
