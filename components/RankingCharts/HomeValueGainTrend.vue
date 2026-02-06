@@ -70,6 +70,7 @@ const tooltip = ref({
 })
 
 const hoveredSeriesIndex = ref<number>(-1)
+const hoveredDataIndex = ref<number>(-1)
 
 let hideTooltipTimer: any = null
 
@@ -97,19 +98,116 @@ const handleMouseMove = (event: MouseEvent) => {
 
 	// Dynamically resolve data point if hovering a series
 	if (hoveredSeriesIndex.value !== -1 && chartInstance.value && chartData.value[hoveredSeriesIndex.value]) {
-		const xIndex = chartInstance.value.convertFromPixel({ xAxisIndex: 0 }, [x, y])
+		const pixelResult = chartInstance.value.convertFromPixel({ xAxisIndex: 0 }, [x, y])
+		const xIndex = Array.isArray(pixelResult) ? pixelResult[0] : pixelResult
 		const itemData = chartData.value[hoveredSeriesIndex.value]
 		
-		if (itemData.data && itemData.data[xIndex]) {
-			const pointData = itemData.data[xIndex]
-			tooltip.value.data.year = pointData.period
-			tooltip.value.data.val = (pointData.growth_rate * 100).toFixed(2)
+		// Safety check for data existence
+		if (itemData && itemData.data && itemData.data.length > 0) {
+			// Ensure xIndex is within bounds
+			let safeIndex = typeof xIndex === 'number' ? Math.round(xIndex) : 0
+			if (safeIndex < 0) safeIndex = 0
+			if (safeIndex >= itemData.data.length) safeIndex = itemData.data.length - 1
+			
+			// Highlight the specific data point and show its symbol
+			if (hoveredDataIndex.value !== safeIndex) {
+				// Hide previous point's symbol
+				if (hoveredDataIndex.value !== -1 && chartInstance.value) {
+					chartInstance.value.dispatchAction({
+						type: 'downplay',
+						seriesIndex: hoveredSeriesIndex.value,
+						dataIndex: hoveredDataIndex.value
+					})
+					
+					// Update previous point to hide symbol
+					const option = chartInstance.value.getOption() as any
+					if (option.series && option.series[hoveredSeriesIndex.value] && 
+						option.series[hoveredSeriesIndex.value].data && 
+						Array.isArray(option.series[hoveredSeriesIndex.value].data)) {
+						const newData = [...option.series[hoveredSeriesIndex.value].data]
+						const prevPoint = { ...newData[hoveredDataIndex.value] }
+						if (prevPoint && typeof prevPoint === 'object') {
+							prevPoint.symbolSize = 0
+							prevPoint.itemStyle = { opacity: 0 }
+							newData[hoveredDataIndex.value] = prevPoint
+							const seriesUpdate: any = {}
+							seriesUpdate[`series.${hoveredSeriesIndex.value}.data`] = newData
+							chartInstance.value.setOption(seriesUpdate, false)
+						}
+					}
+				}
+				
+				// Show new point's symbol - use direct update method
+				const option = chartInstance.value.getOption() as any
+				if (option.series && option.series[hoveredSeriesIndex.value] && 
+					option.series[hoveredSeriesIndex.value].data && 
+					Array.isArray(option.series[hoveredSeriesIndex.value].data)) {
+					// Create a new data array with updated point
+					const newData = [...option.series[hoveredSeriesIndex.value].data]
+					const currentPoint = { ...newData[safeIndex] }
+					currentPoint.symbolSize = 14
+					currentPoint.itemStyle = {
+						opacity: 1,
+						borderColor: '#fff',
+						borderWidth: 2
+					}
+					newData[safeIndex] = currentPoint
+					
+					// Update only the specific series
+					const seriesUpdate: any = {}
+					seriesUpdate[`series.${hoveredSeriesIndex.value}.data`] = newData
+					chartInstance.value.setOption(seriesUpdate, false)
+				}
+				
+				// Also dispatch highlight action
+				chartInstance.value.dispatchAction({
+					type: 'highlight',
+					seriesIndex: hoveredSeriesIndex.value,
+					dataIndex: safeIndex
+				})
+				
+				hoveredDataIndex.value = safeIndex
+			}
+
+			const pointData = itemData.data[safeIndex]
+			if (pointData) {
+				tooltip.value.data.year = pointData.period
+				tooltip.value.data.val = (pointData.growth_rate * 100).toFixed(2)
+			}
 		}
 	}
 }
 
 const handleMouseLeave = () => {
 	tooltip.value.visible = false
+	// Clear highlight and hide symbol
+	if (hoveredSeriesIndex.value !== -1 && hoveredDataIndex.value !== -1 && chartInstance.value) {
+		chartInstance.value.dispatchAction({
+			type: 'downplay',
+			seriesIndex: hoveredSeriesIndex.value,
+			dataIndex: hoveredDataIndex.value
+		})
+		
+		// Hide the point's symbol
+		const option = chartInstance.value.getOption() as any
+		if (option.series && option.series[hoveredSeriesIndex.value] && 
+			option.series[hoveredSeriesIndex.value].data && 
+			Array.isArray(option.series[hoveredSeriesIndex.value].data)) {
+			const newData = [...option.series[hoveredSeriesIndex.value].data]
+			const point = { ...newData[hoveredDataIndex.value] }
+			if (point && typeof point === 'object') {
+				point.symbolSize = 0
+				point.itemStyle = { opacity: 0 }
+				newData[hoveredDataIndex.value] = point
+				const seriesUpdate: any = {}
+				seriesUpdate[`series.${hoveredSeriesIndex.value}.data`] = newData
+				chartInstance.value.setOption(seriesUpdate, false)
+			}
+		}
+		
+		hoveredDataIndex.value = -1
+		hoveredSeriesIndex.value = -1
+	}
 }
 
 // Initialize chart
@@ -132,14 +230,64 @@ onMounted(() => {
 				if (chartData.value && chartData.value[seriesIndex]) {
 					const itemData = chartData.value[seriesIndex]
 					
-					// Initial data setup (Metro/City/Zip are constant for the line)
-					// Year/Val will be updated by mousemove immediately
+					// Default to '-'
+					let year = '-'
+					let val = '-'
+					let targetIndex = -1
+
+					// If we hit a specific point (symbol), use its data
+					if (params.dataIndex !== undefined && itemData.data[params.dataIndex]) {
+						targetIndex = params.dataIndex
+						const pointData = itemData.data[params.dataIndex]
+						year = pointData.period
+						val = (pointData.growth_rate * 100).toFixed(2)
+					} 
+					// If we hit the line, try to resolve from mouse position immediately
+					else if (params.event && params.event.offsetX && chartInstance.value) {
+						const x = params.event.offsetX
+						const y = params.event.offsetY
+						const pixelResult = chartInstance.value.convertFromPixel({ xAxisIndex: 0 }, [x, y])
+						const xIndex = Array.isArray(pixelResult) ? pixelResult[0] : pixelResult
+						const safeIndex = typeof xIndex === 'number' ? Math.round(xIndex) : -1
+						
+						if (safeIndex >= 0 && safeIndex < itemData.data.length && itemData.data[safeIndex]) {
+							targetIndex = safeIndex
+							const pointData = itemData.data[safeIndex]
+							year = pointData.period
+							val = (pointData.growth_rate * 100).toFixed(2)
+						}
+					}
+
+					// Show the point's symbol if we have a valid index
+					if (targetIndex >= 0 && chartInstance.value) {
+						const option = chartInstance.value.getOption() as any
+						if (option.series && option.series[seriesIndex] && 
+							option.series[seriesIndex].data && 
+							Array.isArray(option.series[seriesIndex].data)) {
+							const newData = [...option.series[seriesIndex].data]
+							const point = { ...newData[targetIndex] }
+							if (point && typeof point === 'object') {
+								point.symbolSize = 14
+								point.itemStyle = {
+									opacity: 1,
+									borderColor: '#fff',
+									borderWidth: 2
+								}
+								newData[targetIndex] = point
+								const seriesUpdate: any = {}
+								seriesUpdate[`series.${seriesIndex}.data`] = newData
+								chartInstance.value.setOption(seriesUpdate, false)
+								hoveredDataIndex.value = targetIndex
+							}
+						}
+					}
+
 					tooltip.value.data = {
 						metro: itemData.metro || '-',
 						city: itemData.city || '-',
 						zipcode: itemData.zipcode || '-',
-						year: params.name || '-', 
-						val: params.value !== undefined ? params.value : '-'
+						year: year,
+						val: val
 					}
 					tooltip.value.visible = true
 				}
@@ -148,8 +296,37 @@ onMounted(() => {
 
 		chartInstance.value.on('mouseout', (params: any) => {
 			if (params.componentType === 'series') {
-				hoveredSeriesIndex.value = -1 // Stop tracking data updates
+				// Delay resetting index to handle smooth transition between symbol and line
 				hideTooltipTimer = setTimeout(() => {
+					// Clear point highlight and hide symbol
+					if (hoveredDataIndex.value !== -1 && chartInstance.value) {
+						chartInstance.value.dispatchAction({
+							type: 'downplay',
+							seriesIndex: hoveredSeriesIndex.value,
+							dataIndex: hoveredDataIndex.value
+						})
+						
+						// Hide the point's symbol
+						const option = chartInstance.value.getOption() as any
+						if (option.series && option.series[hoveredSeriesIndex.value] && 
+							option.series[hoveredSeriesIndex.value].data && 
+							Array.isArray(option.series[hoveredSeriesIndex.value].data)) {
+							const point = option.series[hoveredSeriesIndex.value].data[hoveredDataIndex.value]
+							if (point && typeof point === 'object') {
+								point.symbolSize = 0
+								if (point.itemStyle) {
+									point.itemStyle.opacity = 0
+								} else {
+									point.itemStyle = { opacity: 0 }
+								}
+								chartInstance.value.setOption(option, false)
+							}
+						}
+						
+						hoveredDataIndex.value = -1
+					}
+					
+					hoveredSeriesIndex.value = -1 
 					tooltip.value.visible = false
 				}, 100)
 			}
@@ -231,27 +408,38 @@ const renderChart = () => {
 			periods = item.data.map((d: any) => d.period)
 		}
 
-		// Extract growth rates
-		const data = item.data.map((d: any) => (d.growth_rate * 100).toFixed(2)) // Convert to percentage
+		// Extract growth rates and create data array with symbol configuration
+		const dataWithSymbols = item.data.map((d: any) => ({
+			value: parseFloat((d.growth_rate * 100).toFixed(2)), // Convert to percentage as number
+			symbol: 'circle',
+			symbolSize: 0, // Hidden by default
+			itemStyle: {
+				opacity: 0
+			}
+		}))
 
 		series.push({
 			name: name,
 			type: 'line',
-			data: data,
+			data: dataWithSymbols,
 			smooth: true,
-			showSymbol: false, // Default hidden
-			symbol: 'circle', // Ensure it has a shape
-			symbolSize: 10, // Larger hit area
+			showSymbol: true, // Enable symbols
+			symbol: 'circle',
+			symbolSize: 0, // Default hidden
 			triggerLineEvent: true, // Enable hover on the line itself
 			itemStyle: {
 				opacity: 0 // Invisible normally
 			},
 			emphasis: {
 				focus: 'series',
+				showSymbol: true,
+				symbolSize: 12,
 				itemStyle: {
-					opacity: 1, // Visible on hover
+					opacity: 1,
 					borderColor: '#fff',
-					borderWidth: 2
+					borderWidth: 2,
+					shadowBlur: 8,
+					shadowColor: 'rgba(0, 0, 0, 0.3)'
 				}
 			},
 			lineStyle: {
