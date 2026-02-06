@@ -122,13 +122,12 @@
 						</div>
 					</div>
 					
-					<!-- Line Chart Placeholder -->
-					<div class="line-chart-placeholder">
-						<div class="placeholder-content">
-							<i class="el-icon-data-line"></i>
-							<span>Historical Line Chart Module Placeholder</span>
-						</div>
-					</div>
+					<RentTrend 
+						:baseYear="baseYear"
+						:currentYear="currentYear"
+						:selectedMetros="selectedMetros"
+						:selectedZipcodes="selectedZipcodes"
+					/>
 				</div>
 			</div>
 		</div>
@@ -138,6 +137,7 @@
 <script setup lang="ts">
 import { type PropType } from 'vue'
 import RentRanking from '../RankingCharts/RentRanking.vue'
+import RentTrend from '../RankingCharts/RentTrend.vue'
 
 defineProps({
 	data: { type: Array as PropType<any[]>, default: () => [] },
