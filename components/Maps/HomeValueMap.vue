@@ -1,8 +1,5 @@
 <template>
 	<div class="home-value-map">
-		<div class="map-header">
-			<div class="map-title">{{ title }}</div>
-		</div>
 		<div ref="mapContainer" class="map-container"></div>
 		<div class="map-legend">
 			<span class="legend-label">{{ legendLabel }}</span>
