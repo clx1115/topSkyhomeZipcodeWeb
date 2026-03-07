@@ -62,13 +62,14 @@
 
 		<div class="content-container">
 			<div class="left-panel">
-				<!-- Map Placeholder -->
-				<div class="map-placeholder">
-					<div class="placeholder-content">
-						<i class="el-icon-map-location"></i>
-						<span>Map Module Placeholder</span>
-					</div>
-				</div>
+				<HomeValueMap 
+					:data="data"
+					title="Rent"
+					legendLabel="Monthly Rent"
+					valueField="value"
+					unit="$"
+					colorScheme="blueYellow"
+				/>
 			</div>
 			
 			<div class="right-panel">
@@ -138,6 +139,7 @@
 import { type PropType } from 'vue'
 import RentRanking from '../RankingCharts/RentRanking.vue'
 import RentTrend from '../RankingCharts/RentTrend.vue'
+import HomeValueMap from '../Maps/HomeValueMap.vue'
 
 defineProps({
 	data: { type: Array as PropType<any[]>, default: () => [] },

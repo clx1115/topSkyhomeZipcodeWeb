@@ -31,7 +31,7 @@ const props = defineProps({
 
 const mapContainer = ref<HTMLElement | null>(null)
 let map: L.Map | null = null
-const coordsCache: Record<string, { lat: number; lng: number }> = {}
+let zipcodeCoords: Record<string, { lat: number; lng: number }> = {}
 
 const minValue = computed(() => {
 	if (!props.data || props.data.length === 0) return -9.7
@@ -66,7 +66,16 @@ const getColor = (value: number) => {
 onMounted(async () => {
 	if (!mapContainer.value) return
 
-	// 初始化地图（以圣安东尼奥为中心）
+	// 加载本地邮编坐标数据
+	try {
+		const response = await fetch('/data/us-zipcodes.json')
+		if (response.ok) {
+			zipcodeCoords = await response.json()
+		}
+	} catch (error) {
+		console.warn('Failed to load zipcode data:', error)
+	}
+
 	map = L.map(mapContainer.value, {
 		center: [29.4241, -98.4936],
 		zoom: 10,
@@ -81,110 +90,59 @@ onMounted(async () => {
 	await loadZipcodeData()
 })
 
-// 动态获取邮编坐标
-const getZipcodeCoords = async (zipcode: string): Promise<{ lat: number; lng: number } | null> => {
-	// 先检查缓存
-	if (coordsCache[zipcode]) {
-		return coordsCache[zipcode]
-	}
-	
-	try {
-		// 使用 Nominatim API 获取坐标
-		const response = await fetch(
-			`https://nominatim.openstreetmap.org/search?postalcode=${zipcode}&country=US&format=json&limit=1`,
-			{
-				headers: {
-					'User-Agent': 'TopSkyHome/1.0'
-				}
-			}
-		)
-		
-		if (response.ok) {
-			const data = await response.json()
-			if (data.length > 0) {
-				const coords = {
-					lat: parseFloat(data[0].lat),
-					lng: parseFloat(data[0].lon)
-				}
-				// 缓存结果
-				coordsCache[zipcode] = coords
-				return coords
-			}
-		}
-	} catch (error) {
-		console.error(`Failed to fetch coords for ${zipcode}:`, error)
-	}
-	
-	return null
-}
-
 const loadZipcodeData = async () => {
 	if (!props.data || props.data.length === 0) return
 	
 	const bounds: [number, number][] = []
 	
-	// 批量获取坐标（限制并发）
-	const batchSize = 3
-	for (let i = 0; i < props.data.length; i += batchSize) {
-		const batch = props.data.slice(i, i + batchSize)
+	props.data.forEach((item: any) => {
+		const zipcode = item.zipcode || item.Zipcode
+		const value = item[props.valueField] || 0
+		const city = item.city || item.City || ''
+		const metro = item.metro || item.Metro || ''
 		
-		await Promise.all(batch.map(async (item: any) => {
-			const zipcode = item.zipcode || item.Zipcode
-			const value = item[props.valueField] || 0
-			const city = item.city || item.City || ''
-			const metro = item.metro || item.Metro || ''
+		const coords = zipcodeCoords[zipcode]
+		
+		if (coords) {
+			bounds.push([coords.lat, coords.lng])
 			
-			// 动态获取坐标
-			const coords = await getZipcodeCoords(zipcode)
+			const radius = 0.05
+			const sides = 6
+			const polygonCoords: [number, number][] = []
 			
-			if (coords) {
-				bounds.push([coords.lat, coords.lng])
-				
-				// 创建多边形区域
-				const radius = 0.05
-				const sides = 6
-				const polygonCoords: [number, number][] = []
-				
-				for (let j = 0; j < sides; j++) {
-					const angle = (j * 2 * Math.PI) / sides
-					const lat = coords.lat + radius * Math.cos(angle)
-					const lng = coords.lng + radius * Math.sin(angle)
-					polygonCoords.push([lat, lng])
-				}
-				
-				const polygon = L.polygon(polygonCoords, {
-					color: '#666',
-					weight: 1,
-					fillColor: getColor(value),
-					fillOpacity: 0.7
-				}).addTo(map!)
-				
-				L.marker([coords.lat, coords.lng], {
-					icon: L.divIcon({
-						className: 'zipcode-label',
-						html: `<div style="font-size: 11px; font-weight: 600; color: #333; text-shadow: 1px 1px 2px white;">${zipcode}</div>`,
-						iconSize: [50, 20]
-					})
-				}).addTo(map!)
-				
-				polygon.bindTooltip(`
-					<strong>Zipcode: ${zipcode}</strong><br>
-					City: ${city}<br>
-					Metro: ${metro}<br>
-					${props.legendLabel}: ${value.toFixed(1)}${props.unit}
-				`, {
-					sticky: true
-				})
+			for (let j = 0; j < sides; j++) {
+				const angle = (j * 2 * Math.PI) / sides
+				const lat = coords.lat + radius * Math.cos(angle)
+				const lng = coords.lng + radius * Math.sin(angle)
+				polygonCoords.push([lat, lng])
 			}
-		}))
-		
-		// 延迟避免 API 限流
-		if (i + batchSize < props.data.length) {
-			await new Promise(resolve => setTimeout(resolve, 1000))
+			
+			const polygon = L.polygon(polygonCoords, {
+				color: '#666',
+				weight: 1,
+				fillColor: getColor(value),
+				fillOpacity: 0.7
+			}).addTo(map!)
+			
+			L.marker([coords.lat, coords.lng], {
+				icon: L.divIcon({
+					className: 'zipcode-label',
+					html: `<div style="font-size: 11px; font-weight: 600; color: #333; text-shadow: 1px 1px 2px white;">${zipcode}</div>`,
+					iconSize: [50, 20]
+				})
+			}).addTo(map!)
+			
+			polygon.bindTooltip(`
+				<strong>Zipcode: ${zipcode}</strong><br>
+				City: ${city}<br>
+				Metro: ${metro}<br>
+				${props.legendLabel}: ${value.toFixed(1)}${props.unit}
+			`, {
+				sticky: true
+			})
 		}
-	}
+	})
 	
-	// 自动调整地图视图
 	if (bounds.length > 0 && map) {
 		map.fitBounds(bounds, { padding: [50, 50] })
 	}
