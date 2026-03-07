@@ -94,13 +94,14 @@
 
 		<div class="content-container">
 			<div class="left-panel">
-				<!-- Map Placeholder -->
-				<div class="map-placeholder">
-					<div class="placeholder-content">
-						<i class="el-icon-map-location"></i>
-						<span>Map Module Placeholder</span>
-					</div>
-				</div>
+				<HomeValueMap 
+					:data="data"
+					title="Accumulative Home Value Gain"
+					legendLabel="% Home Value Gain"
+					valueField="growth_rate"
+					unit="%"
+					colorScheme="redGreen"
+				/>
 			</div>
 			<div class="right-panel">
 				<div class="chart-top">
@@ -133,6 +134,7 @@
 <script setup lang="ts">
 import HomeValueGainRanking from '@/components/RankingCharts/HomeValueGainRanking.vue'
 import HomeValueGainTrend from '@/components/RankingCharts/HomeValueGainTrend.vue'
+import HomeValueMap from '@/components/Maps/HomeValueMap.vue'
 import { type PropType } from 'vue'
 
 defineProps({
