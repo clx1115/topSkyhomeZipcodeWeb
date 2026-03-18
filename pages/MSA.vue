@@ -115,8 +115,8 @@
 					<div class="panel-body">
 						<div class="table-header population-growth">
 							<span class="col-metro">Metro</span>
-							<span class="col-base">Base Year Pop. ({{ populationBaseYear }})</span>
-							<span class="col-current">Current Year Pop. ({{ populationCurrentYear }})</span>
+							<span class="col-base">Base Year Pop.</span>
+							<span class="col-current">Current Year Pop.</span>
 							<span class="col-rate"></span>
 						</div>
 						<div class="table-body">
@@ -669,10 +669,20 @@ const filteredHomeValue = computed(() => {
 
 		.col-base,
 		.col-current {
-			width: 110px;
+			width: 140px;
 			white-space: nowrap;
 			text-align: right;
 			color: #666;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.col-base {
+			padding-right: 16px;
+		}
+
+		.col-current {
+			padding-left: 16px;
 		}
 
 		.col-rate {
