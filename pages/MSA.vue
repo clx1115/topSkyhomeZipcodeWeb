@@ -59,7 +59,9 @@
 								<span class="col-current">{{ formatCurrencyK(row.current_year_value) }}</span>
 								<span class="col-rate">
 									<div class="bar-line">
-										<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxHomeValueGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+										<div class="bar-wrap">
+											<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxHomeValueGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+										</div>
 										<span class="bar-text">{{ formatPercentAuto(row.growth_rate) }}</span>
 									</div>
 								</span>
@@ -124,7 +126,9 @@
 								<span class="col-current">{{ formatNumberK(row.current_year_population) }}</span>
 								<span class="col-rate">
 									<div class="bar-line">
-										<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxPopulationGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+										<div class="bar-wrap">
+											<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxPopulationGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+										</div>
 										<span class="bar-text">{{ formatPercentAuto(row.growth_rate) }}</span>
 									</div>
 								</span>
