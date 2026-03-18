@@ -78,264 +78,107 @@
 					</template>
 				</div>
 
-				<div class="filter-section">
-					<div class="section-title">Housing Metrics Ranking (Top {{ topN }})</div>
-					<div class="controls">
-						<div class="control-item">
-							<span class="label">Top n</span>
-							<el-input-number v-model="topN" :min="1" :max="100" controls-position="right" size="default" class="w-20" />
-						</div>
-						<div class="control-item">
-							<span class="label">Metro</span>
-							<el-select
-								v-model="selectedMetros"
-								multiple
-								collapse-tags
-								collapse-tags-tooltip
-								placeholder="Select Metro"
-								style="width: 240px"
-								size="default"
-								filterable
-								:filter-method="filterMetros"
-							>
-								<el-option
-									v-for="item in metroList"
-									:key="item"
-									:label="item"
-									:value="item"
-								>
-									<div class="custom-option-item">
-										<el-checkbox :model-value="selectedMetros.includes(item)" size="small" style="pointer-events: none; margin-right: 8px;" />
-										<span class="option-text">{{ item }}</span>
-									</div>
-								</el-option>
-							</el-select>
-						</div>
-						<div class="control-item">
-							<span class="label">Zipcode</span>
-							<el-select
-								v-model="selectedZipcodes"
-								multiple
-								collapse-tags
-								collapse-tags-tooltip
-								placeholder="(All)"
-								style="width: 160px"
-								size="default"
-								filterable
-								:filter-method="filterZipcodes"
-							>
-								<el-option
-									v-for="item in zipcodeList"
-									:key="item"
-									:label="item"
-									:value="item"
-								>
-									<div class="custom-option-item">
-										<el-checkbox :model-value="selectedZipcodes.includes(item)" size="small" style="pointer-events: none; margin-right: 8px;" />
-										<span class="option-text">{{ item }}</span>
-									</div>
-								</el-option>
-							</el-select>
-						</div>
-					</div>
-				</div>
-
 				<!-- Charts Section -->
-				<div class="charts-section">
-					<div class="chart-row">
-						<!-- Chart 1: Home Value Gain Ranking -->
-						<div class="chart-item">
-							<div class="chart-header">
-								<h3>Home Value Gain Ranking</h3>
-								<div class="chart-filters">
-									<div class="year-filter">
-										<span>Base Year</span>
-										<el-select v-model="rankingBaseYear" size="small" style="width: 75px">
-											<el-option v-for="year in yearList" :key="year" :label="year" :value="year" />
-										</el-select>
-									</div>
-									<div class="year-filter">
-										<span>Current Year</span>
-										<el-select v-model="rankingCurrentYear" size="small" style="width: 75px">
-											<el-option v-for="year in yearList" :key="year" :label="year" :value="year" />
-										</el-select>
-									</div>
-								</div>
-							</div>
-							<div class="chart-content">
-								<div class="ranking-table-header">
-									<span class="col-zip">Zipcode</span>
-									<span class="col-city">City</span>
-									<span class="col-metro">Metro</span>
-									<span class="col-growth"></span>
-								</div>
-								<div class="ranking-table-body">
-									<div 
-										v-for="(item, index) in rankingData" 
-										:key="index" 
-										class="ranking-row"
-										@mouseenter="showTooltip($event, item, 'growth')"
-										@mousemove="moveTooltip"
-										@mouseleave="hideTooltip"
-									>
-										<span class="col-zip">{{ item.zipcode }}</span>
-										<span class="col-city">{{ item.city }}</span>
-										<span class="col-metro">{{ item.metro }}</span>
-										<div class="col-growth">
-											<div class="diverging-bar-container">
-												<div class="bar-side left">
-													<template v-if="(item.growth_rate || 0) < 0">
-														<span class="growth-text negative">{{ (item.growth_rate || 0).toFixed(1) }}%</span>
-														<div 
-															class="growth-bar negative" 
-															:style="{ width: (Math.abs(item.growth_rate || 0) / maxGrowthVal * 100) + '%' }"
-														></div>
-													</template>
-												</div>
-												<div class="axis-line"></div>
-												<div class="bar-side right">
-													<template v-if="(item.growth_rate || 0) >= 0">
-														<div 
-															class="growth-bar positive" 
-															:style="{ width: (Math.abs(item.growth_rate || 0) / maxGrowthVal * 100) + '%' }"
-														></div>
-														<span class="growth-text positive">{{ (item.growth_rate || 0).toFixed(1) }}%</span>
-													</template>
-												</div>
-											</div>
-										</div>
-									</div>
-									<div v-if="rankingData.length === 0" class="no-data">
-										No data available
-									</div>
-								</div>
-							</div>
-						</div>
-						
-						<!-- Chart 2: Rent to Home Value Ranking -->
-						<div class="chart-item">
-							<div class="chart-header">
-								<h3>Rent to Home Value Ranking</h3>
-							</div>
-							<div class="chart-content">
-								<div class="ranking-table-header">
-									<span class="col-zip">Zipcode</span>
-									<span class="col-city">City</span>
-									<span class="col-metro">Metro</span>
-									<span class="col-growth"></span>
-								</div>
-								<div class="ranking-table-body">
-									<div 
-										v-for="(item, index) in rentToValueData" 
-										:key="index" 
-										class="ranking-row"
-										@mouseenter="showTooltip($event, item, 'rent_to_value')"
-										@mousemove="moveTooltip"
-										@mouseleave="hideTooltip"
-									>
-										<span class="col-zip">{{ item.zipcode }}</span>
-										<span class="col-city">{{ item.city }}</span>
-										<span class="col-metro">{{ item.metro }}</span>
-										<div class="col-growth">
-											<div class="growth-bar-container">
-												<div 
-													class="growth-bar" 
-													:style="{ width: ((item.value || 0) / maxRentToValueVal * 100) + '%', backgroundColor: getBarColor(index) }"
-												></div>
-												<span class="growth-text">{{ ((item.value || 0) * 100).toFixed(1) }}%</span>
-											</div>
-										</div>
-									</div>
-									<div v-if="rentToValueData.length === 0" class="no-data">
-										No data available
-									</div>
-								</div>
-							</div>
-						</div>
+				<!-- Tab Content Switcher -->
+				<MetroTab 
+					v-if="currentTab === 'Metro'"
+					:rankingData="rankingData"
+					:rentToValueData="rentToValueData"
+					:homeValueData="homeValueData"
+					:rentData="rentData"
+					v-model:rankingBaseYear="rankingBaseYear"
+					v-model:rankingCurrentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:topN="topN"
+					@update:topN="topN = $event"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
+				
+				<HomeValueGainTab 
+					v-else-if="currentTab === 'Home Value Gain'"
+					:data="rankingData"
+					v-model:baseYear="rankingBaseYear"
+					v-model:currentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
 
-						<!-- Chart 3: Home Value Ranking -->
-						<div class="chart-item">
-							<div class="chart-header">
-								<h3>Home Value Ranking</h3>
-							</div>
-							<div class="chart-content">
-								<div class="ranking-table-header">
-									<span class="col-zip">Zipcode</span>
-									<span class="col-city">City</span>
-									<span class="col-metro">Metro</span>
-									<span class="col-growth"></span>
-								</div>
-								<div class="ranking-table-body">
-									<div 
-										v-for="(item, index) in homeValueData" 
-										:key="index" 
-										class="ranking-row"
-										@mouseenter="showTooltip($event, item, 'home_value')"
-										@mousemove="moveTooltip"
-										@mouseleave="hideTooltip"
-									>
-										<span class="col-zip">{{ item.zipcode }}</span>
-										<span class="col-city">{{ item.city }}</span>
-										<span class="col-metro">{{ item.metro }}</span>
-										<div class="col-growth">
-											<div class="growth-bar-container">
-												<div 
-													class="growth-bar" 
-													:style="{ width: ((item.value || 0) / maxHomeValueVal * 100) + '%', backgroundColor: getBarColor(index) }"
-												></div>
-												<span class="growth-text">${{ Math.round((item.value || 0) / 1000).toLocaleString() }}K</span>
-											</div>
-										</div>
-									</div>
-									<div v-if="homeValueData.length === 0" class="no-data">
-										No data available
-									</div>
-								</div>
-							</div>
-						</div>
+				<RentToHomeValueTab 
+					v-else-if="currentTab === 'Rent to Home Value'"
+					:data="rentToValueData"
+					v-model:baseYear="rankingBaseYear"
+					v-model:currentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
 
-						<!-- Chart 4: Rent Ranking -->
-						<div class="chart-item">
-							<div class="chart-header">
-								<h3>Rent Ranking</h3>
-							</div>
-							<div class="chart-content">
-								<div class="ranking-table-header">
-									<span class="col-zip">Zipcode</span>
-									<span class="col-city">City</span>
-									<span class="col-metro">Metro</span>
-									<span class="col-growth"></span>
-								</div>
-								<div class="ranking-table-body">
-									<div 
-										v-for="(item, index) in rentData" 
-										:key="index" 
-										class="ranking-row"
-										@mouseenter="showTooltip($event, item, 'rent')"
-										@mousemove="moveTooltip"
-										@mouseleave="hideTooltip"
-									>
-										<span class="col-zip">{{ item.zipcode }}</span>
-										<span class="col-city">{{ item.city }}</span>
-										<span class="col-metro">{{ item.metro }}</span>
-										<div class="col-growth">
-											<div class="growth-bar-container">
-												<div 
-													class="growth-bar" 
-													:style="{ width: ((item.value || 0) / maxRentVal * 100) + '%', backgroundColor: getBarColor(index) }"
-												></div>
-												<span class="growth-text">${{ Math.round(item.value || 0).toLocaleString() }}</span>
-											</div>
-										</div>
-									</div>
-									<div v-if="rentData.length === 0" class="no-data">
-										No data available
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+				<HomeValueTab 
+					v-else-if="currentTab === 'Home Value'"
+					:data="homeValueData"
+					v-model:baseYear="rankingBaseYear"
+					v-model:currentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
+
+				<RentTab 
+					v-else-if="currentTab === 'Rent'"
+					:data="rentData"
+					v-model:baseYear="rankingBaseYear"
+					v-model:currentYear="rankingCurrentYear"
+					:yearList="yearList"
+					:selectedMetros="selectedMetros"
+					@update:selectedMetros="selectedMetros = $event"
+					:selectedZipcodes="selectedZipcodes"
+					@update:selectedZipcodes="selectedZipcodes = $event"
+					:metroList="metroList"
+					:zipcodeList="zipcodeList"
+					@search:metro="filterMetros"
+					@search:zipcode="filterZipcodes"
+					@showTooltip="showTooltip"
+					@moveTooltip="moveTooltip"
+					@hideTooltip="hideTooltip"
+				/>
 			</ClientOnly>
 		</div>
 	</div>
@@ -343,6 +186,11 @@
 <script setup lang="ts">
 	import { getZipcodeMetrosList, getZipcodeList, growthRate, zipcodeRank } from "@/api/charts"
 	import { ref, onMounted, watch, computed } from 'vue'
+	import MetroTab from '@/components/Tabs/MetroTab.vue'
+	import HomeValueGainTab from '@/components/Tabs/HomeValueGainTab.vue'
+	import RentToHomeValueTab from '@/components/Tabs/RentToHomeValueTab.vue'
+	import HomeValueTab from '@/components/Tabs/HomeValueTab.vue'
+	import RentTab from '@/components/Tabs/RentTab.vue'
 
 	const tabs = ['Metro','Home Value Gain', 'Rent to Home Value', 'Home Value', 'Rent']
 	const currentTab = ref('Metro')
@@ -369,16 +217,6 @@
 	const homeValueData = ref<any[]>([])
 	const rentData = ref<any[]>([])
 
-	const barColors = [
-		'#8884d8', '#8dd1e1', '#82ca9d', '#a4de6c', '#d0ed57', '#ffc658',
-		'#ff7300', '#ff0000', '#0088fe', '#00c49f', '#ffbb28', '#ff8042',
-		'#413ea0', '#f50057', '#7c4dff', '#00b0ff'
-	]
-
-	const getBarColor = (index: number) => {
-		return barColors[index % barColors.length]
-	}
-
 	// 搜索过滤方法
 	const filterMetros = (query: string) => {
 		if (query) {
@@ -401,7 +239,7 @@
 	}
 
 	const fetchFilterData = async () => {
-		const allOption = "(All)"
+		const allOption = "all"
 		
 		// 获取 Metro 列表
 		try {
@@ -455,8 +293,8 @@
 	const fetchRankingData = async () => {
 		try {
 			// 处理参数
-			const metros = selectedMetros.value.includes('(All)') ? '' : selectedMetros.value.join(',')
-			const zipcodes = selectedZipcodes.value.includes('(All)') ? '' : selectedZipcodes.value.join(',')
+			const metros = (selectedMetros.value.includes('all') || selectedMetros.value.includes('(All)')) ? '' : selectedMetros.value.join(',')
+			const zipcodes = (selectedZipcodes.value.includes('all') || selectedZipcodes.value.includes('(All)')) ? '' : selectedZipcodes.value.join(',')
 			
 			const params = {
 				base_year: rankingBaseYear.value,
@@ -476,8 +314,8 @@
 
 	const fetchOtherChartsData = async () => {
 		try {
-			const metros = selectedMetros.value.includes('(All)') ? '' : selectedMetros.value.join(',')
-			const zipcodes = selectedZipcodes.value.includes('(All)') ? '' : selectedZipcodes.value.join(',')
+			const metros = (selectedMetros.value.includes('all') || selectedMetros.value.includes('(All)')) ? '' : selectedMetros.value.join(',')
+			const zipcodes = (selectedZipcodes.value.includes('all') || selectedZipcodes.value.includes('(All)')) ? '' : selectedZipcodes.value.join(',')
 			const baseParams = {
 				metro: metros,
 				zipcode: zipcodes,
@@ -501,27 +339,6 @@
 			console.error("Failed to fetch other charts data:", error)
 		}
 	}
-
-	// Computed Max Values for scaling
-	const maxGrowthVal = computed(() => {
-		if (!rankingData.value.length) return 1
-		return Math.max(...rankingData.value.map(item => Math.abs(item.growth_rate || 0))) || 1
-	})
-
-	const maxRentToValueVal = computed(() => {
-		if (!rentToValueData.value.length) return 1
-		return Math.max(...rentToValueData.value.map(item => Number(item.value) || 0)) || 1
-	})
-
-	const maxHomeValueVal = computed(() => {
-		if (!homeValueData.value.length) return 1
-		return Math.max(...homeValueData.value.map(item => Number(item.value) || 0)) || 1
-	})
-
-	const maxRentVal = computed(() => {
-		if (!rentData.value.length) return 1
-		return Math.max(...rentData.value.map(item => Number(item.value) || 0)) || 1
-	})
 
 	// Tooltip State
 	const tooltip = ref({
