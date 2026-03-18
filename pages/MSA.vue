@@ -95,19 +95,33 @@
 				<div class="panel">
 					<div class="panel-header">
 						<div class="panel-title">% of Population Growth</div>
+						<div class="year-pickers">
+							<div class="year-picker">
+								<span class="year-label">Base Year</span>
+								<el-select v-model="populationBaseYear" style="width: 110px">
+									<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
+								</el-select>
+							</div>
+							<div class="year-picker">
+								<span class="year-label">Current Year</span>
+								<el-select v-model="populationCurrentYear" style="width: 110px">
+									<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
+								</el-select>
+							</div>
+						</div>
 					</div>
 					<div class="panel-body">
 						<div class="table-header population-growth">
 							<span class="col-metro">Metro</span>
-							<span class="col-base">Base Year Pop.</span>
-							<span class="col-current">Current Year Pop.</span>
+							<span class="col-base">Base Year Pop. ({{ populationBaseYear }})</span>
+							<span class="col-current">Current Year Pop. ({{ populationCurrentYear }})</span>
 							<span class="col-rate"></span>
 						</div>
 						<div class="table-body">
 							<div v-for="(row, idx) in filteredPopulationGrowth" :key="row.metro + idx" class="table-row population-growth">
 								<span class="col-metro">{{ row.metro }}</span>
-								<span class="col-base">{{ formatNumber(row.base_year_population) }}</span>
-								<span class="col-current">{{ formatNumber(row.current_year_population) }}</span>
+								<span class="col-base">{{ formatNumberK(row.base_year_population) }}</span>
+								<span class="col-current">{{ formatNumberK(row.current_year_population) }}</span>
 								<span class="col-rate">
 									<div class="bar-line">
 										<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxPopulationGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
@@ -181,6 +195,8 @@ const metroList = ref<string[]>([])
 const yearList = Array.from({ length: 31 }, (_, i) => 1996 + i).reverse()
 const baseYear = ref(2020)
 const currentYear = ref(2024)
+const populationBaseYear = ref(2023)
+const populationCurrentYear = ref(2024)
 
 const populationMax = 20000000
 const minPopulation = ref(1000000)
@@ -219,6 +235,12 @@ const formatNumber = (val: number | undefined | null) => {
 	const num = Number(val)
 	if (!Number.isFinite(num)) return "-"
 	return num.toLocaleString()
+}
+
+const formatNumberK = (val: number | undefined | null) => {
+	const num = Number(val)
+	if (!Number.isFinite(num)) return "-"
+	return `${Math.round(num / 1000).toLocaleString()}K`
 }
 
 const formatCurrencyK = (val: number | undefined | null) => {
@@ -344,9 +366,20 @@ const fetchAll = async () => {
 	if (safeBase !== baseYear.value) baseYear.value = safeBase
 	if (safeCurrent !== currentYear.value) currentYear.value = safeCurrent
 
+	const safePopBase = Math.min(populationBaseYear.value, populationCurrentYear.value)
+	const safePopCurrent = Math.max(populationBaseYear.value, populationCurrentYear.value)
+	if (safePopBase !== populationBaseYear.value) populationBaseYear.value = safePopBase
+	if (safePopCurrent !== populationCurrentYear.value) populationCurrentYear.value = safePopCurrent
+
 	const common = {
 		base_year: baseYear.value,
 		current_year: currentYear.value,
+		top: topN.value
+	}
+
+	const populationParams = {
+		base_year: populationBaseYear.value,
+		current_year: populationCurrentYear.value,
 		top: topN.value
 	}
 
@@ -355,7 +388,7 @@ const fetchAll = async () => {
 	const [growthRes, rentToValueRes, popRes, homeValueRes] = await Promise.all([
 		getMsaHomeValueGrowthRank({ ...common, min_population: minPopNum }),
 		getMsaRentToValueRank({ ...common, min_population: minPopNum }),
-		getMsaPopulationGrowthRank({ ...common, min_avg_population: minPopNum }),
+		getMsaPopulationGrowthRank({ ...populationParams, min_avg_population: minPopNum }),
 		getMsaHomeValueRank({ ...common, min_avg_population: minPopNum })
 	])
 
@@ -387,7 +420,7 @@ const debouncedFetch = () => {
 	}, 500)
 }
 
-watch([topN, baseYear, currentYear, minPopulation], () => debouncedFetch())
+watch([topN, baseYear, currentYear, populationBaseYear, populationCurrentYear, minPopulation], () => debouncedFetch())
 
 onMounted(async () => {
 	await fetchMetroList()
@@ -536,6 +569,26 @@ const filteredHomeValue = computed(() => {
 		gap: 12px;
 		padding: 12px 14px;
 		border-bottom: 1px solid #f1f1f1;
+	}
+
+	.year-pickers {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+
+	.year-picker {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.year-label {
+		font-size: 12px;
+		color: #666;
+		white-space: nowrap;
 	}
 
 	.panel-title {
