@@ -60,7 +60,7 @@
 								<span class="col-rate">
 									<div class="bar-line">
 										<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxHomeValueGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
-										<span class="bar-text">{{ formatPercent(row.growth_rate) }}</span>
+										<span class="bar-text">{{ formatPercentAuto(row.growth_rate) }}</span>
 									</div>
 								</span>
 							</div>
@@ -75,7 +75,7 @@
 						<div class="range">
 							<span class="range-label">Rent to Home Value</span>
 							<el-slider v-model="rentToValueRange" range :min="rentToValueMin" :max="rentToValueMax" :step="0.0001" :show-tooltip="false" style="width: 280px" />
-							<span class="range-value">{{ formatPercent(rentToValueRange[0]) }} - {{ formatPercent(rentToValueRange[1]) }}</span>
+							<span class="range-value">{{ formatPercentRatio(rentToValueRange[0]) }} - {{ formatPercentRatio(rentToValueRange[1]) }}</span>
 						</div>
 					</div>
 					<div class="panel-body">
@@ -85,7 +85,7 @@
 								<div class="bar-wrap">
 									<div class="bar" :style="{ width: ((row.avg_rent_to_home_value || 0) / (maxRentToValue || 1) * 100) + '%', backgroundColor: barColor(idx) }"></div>
 								</div>
-								<span class="bar-val">{{ formatPercent(row.avg_rent_to_home_value) }}</span>
+								<span class="bar-val">{{ formatPercentRatio(row.avg_rent_to_home_value) }}</span>
 							</div>
 							<div v-if="filteredRentToValue.length === 0" class="empty">No data</div>
 						</div>
@@ -111,7 +111,7 @@
 								<span class="col-rate">
 									<div class="bar-line">
 										<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxPopulationGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
-										<span class="bar-text">{{ formatPercent(row.growth_rate) }}</span>
+										<span class="bar-text">{{ formatPercentAuto(row.growth_rate) }}</span>
 									</div>
 								</span>
 							</div>
@@ -183,7 +183,7 @@ const baseYear = ref(2020)
 const currentYear = ref(2024)
 
 const populationMax = 20000000
-const minPopulation = ref(1)
+const minPopulation = ref(1000000)
 
 const homeValueGrowthData = ref<MsaHomeValueGrowthItem[]>([])
 const populationGrowthData = ref<MsaPopulationGrowthItem[]>([])
@@ -227,10 +227,26 @@ const formatCurrencyK = (val: number | undefined | null) => {
 	return `$${Math.round(num / 1000).toLocaleString()}K`
 }
 
-const formatPercent = (val: number | undefined | null) => {
+const formatPercentRatio = (val: number | undefined | null) => {
 	const num = Number(val)
 	if (!Number.isFinite(num)) return "-"
 	return `${(num * 100).toFixed(2)}%`
+}
+
+const formatPercentAuto = (val: number | undefined | null) => {
+	const num = Number(val)
+	if (!Number.isFinite(num)) return "-"
+	const normalized = Math.abs(num) <= 1 ? num * 100 : num
+	return `${normalized.toFixed(2)}%`
+}
+
+const toNum = (val: any, fallback = 0) => {
+	const num = Number(val)
+	return Number.isFinite(num) ? num : fallback
+}
+
+const toStr = (val: any) => {
+	return typeof val === "string" ? val : ""
 }
 
 const normalizeMetroList = (raw: any): string[] => {
@@ -244,6 +260,72 @@ const normalizeMetroList = (raw: any): string[] => {
 		})
 		.filter(Boolean)
 	return Array.from(new Set(mapped))
+}
+
+const normalizeHomeValueGrowth = (raw: any): MsaHomeValueGrowthItem[] => {
+	const data = raw?.data ?? raw ?? []
+	if (!Array.isArray(data)) return []
+	return data
+		.map((x: any) => {
+			const metro = toStr(x?.metro) || toStr(x?.msa) || toStr(x?.name)
+			const base_year_value = toNum(x?.base_year_value ?? x?.base_value ?? x?.base_year_home_value)
+			const current_year_value = toNum(x?.current_year_value ?? x?.current_value ?? x?.current_year_home_value)
+			const growth_rate = toNum(x?.growth_rate ?? x?.growthRate ?? x?.rate)
+			return { metro, base_year_value, current_year_value, growth_rate }
+		})
+		.filter((x: any) => x.metro)
+}
+
+const normalizePopulationGrowth = (raw: any): MsaPopulationGrowthItem[] => {
+	const data = raw?.data ?? raw ?? []
+	if (!Array.isArray(data)) return []
+	return data
+		.map((x: any) => {
+			const metro = toStr(x?.metro) || toStr(x?.msa) || toStr(x?.name)
+			const base_year_population = toNum(
+				x?.base_year_population ??
+					x?.base_year_pop ??
+					x?.base_population ??
+					x?.base_pop ??
+					x?.baseYearPopulation ??
+					x?.baseYearPop
+			)
+			const current_year_population = toNum(
+				x?.current_year_population ??
+					x?.current_year_pop ??
+					x?.current_population ??
+					x?.current_pop ??
+					x?.currentYearPopulation ??
+					x?.currentYearPop
+			)
+			const growth_rate = toNum(x?.growth_rate ?? x?.growthRate ?? x?.rate)
+			return { metro, base_year_population, current_year_population, growth_rate }
+		})
+		.filter((x: any) => x.metro)
+}
+
+const normalizeRentToValue = (raw: any): MsaRentToValueItem[] => {
+	const data = raw?.data ?? raw ?? []
+	if (!Array.isArray(data)) return []
+	return data
+		.map((x: any) => {
+			const metro = toStr(x?.metro) || toStr(x?.msa) || toStr(x?.name)
+			const avg_rent_to_home_value = toNum(x?.avg_rent_to_home_value ?? x?.value ?? x?.rent_to_value)
+			return { metro, avg_rent_to_home_value }
+		})
+		.filter((x: any) => x.metro)
+}
+
+const normalizeHomeValue = (raw: any): MsaHomeValueItem[] => {
+	const data = raw?.data ?? raw ?? []
+	if (!Array.isArray(data)) return []
+	return data
+		.map((x: any) => {
+			const metro = toStr(x?.metro) || toStr(x?.msa) || toStr(x?.name)
+			const avg_home_value_index = toNum(x?.avg_home_value_index ?? x?.value ?? x?.avg_home_value)
+			return { metro, avg_home_value_index }
+		})
+		.filter((x: any) => x.metro)
 }
 
 const fetchMetroList = async () => {
@@ -277,10 +359,10 @@ const fetchAll = async () => {
 		getMsaHomeValueRank({ ...common, min_avg_population: minPopNum })
 	])
 
-	homeValueGrowthData.value = (growthRes as any)?.data ?? (growthRes as any) ?? []
-	rentToValueData.value = (rentToValueRes as any)?.data ?? (rentToValueRes as any) ?? []
-	populationGrowthData.value = (popRes as any)?.data ?? (popRes as any) ?? []
-	homeValueData.value = (homeValueRes as any)?.data ?? (homeValueRes as any) ?? []
+	homeValueGrowthData.value = normalizeHomeValueGrowth(growthRes as any)
+	rentToValueData.value = normalizeRentToValue(rentToValueRes as any)
+	populationGrowthData.value = normalizePopulationGrowth(popRes as any)
+	homeValueData.value = normalizeHomeValue(homeValueRes as any)
 
 	const rentVals = rentToValueData.value.map(x => Number(x.avg_rent_to_home_value) || 0)
 	const rentMin = rentVals.length ? Math.min(...rentVals) : 0
