@@ -1,763 +1,617 @@
 <template>
-	<div class="matechat-box">
-		<div class="matechat-container">
+	<div class="msa-page">
+		<div class="msa-container">
 			<div class="header-section">
-				<h1 class="title">Housing Data By Metropolitan Statistical Area(MSA)</h1>
-				<p class="subtitle">Narrow down your investment region by comparing data for different metropolitan area.</p>
+				<h1 class="title">Housing Related MSA Metrics (Top {{ topN }})</h1>
 			</div>
-			
-			<div class="metrics-container">
-				<div class="metrics-bar">
-					<div class="tabs-wrapper">
-						<div class="metric-item" 
-							v-for="item in tabs" 
-							:key="item" 
-							:class="{ active: currentTab === item }" 
-							@click="currentTab = item">
-							{{ item }}
+
+			<div class="filter-bar">
+				<div class="filter-group">
+					<span class="label">Top n</span>
+					<el-input-number v-model="topN" :min="1" :max="100" controls-position="right" class="w-20" />
+				</div>
+
+				<div class="filter-group">
+					<span class="label">Metro</span>
+					<el-select v-model="selectedMetro" placeholder="(All)" filterable style="width: 320px">
+						<el-option label="(All)" value="__all__" />
+						<el-option v-for="m in metroList" :key="m" :label="m" :value="m" />
+					</el-select>
+				</div>
+
+				<div class="filter-group wide">
+					<span class="label">Population</span>
+					<el-slider v-model="minPopulation" :min="1000000" :max="populationMax" :step="1" :show-tooltip="false" />
+					<span class="value">{{ formatNumber(minPopulation) }}</span>
+				</div>
+
+				<div class="filter-group">
+					<span class="label">Base Year</span>
+					<el-select v-model="baseYear" style="width: 120px">
+						<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
+					</el-select>
+				</div>
+
+				<div class="filter-group">
+					<span class="label">Current Year</span>
+					<el-select v-model="currentYear" style="width: 120px">
+						<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
+					</el-select>
+				</div>
+			</div>
+
+			<div class="grid">
+				<div class="panel">
+					<div class="panel-header">
+						<div class="panel-title">% of Home Value Gain</div>
+					</div>
+					<div class="panel-body">
+						<div class="table-header home-value-gain">
+							<span class="col-metro">Metro</span>
+							<span class="col-base">Base Year Value</span>
+							<span class="col-current">Current Year Value</span>
+							<span class="col-rate"></span>
+						</div>
+						<div class="table-body">
+							<div v-for="(row, idx) in filteredHomeValueGrowth" :key="row.metro + idx" class="table-row home-value-gain">
+								<span class="col-metro">{{ row.metro }}</span>
+								<span class="col-base">{{ formatCurrencyK(row.base_year_value) }}</span>
+								<span class="col-current">{{ formatCurrencyK(row.current_year_value) }}</span>
+								<span class="col-rate">
+									<div class="bar-line">
+										<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxHomeValueGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+										<span class="bar-text">{{ formatPercent(row.growth_rate) }}</span>
+									</div>
+								</span>
+							</div>
+							<div v-if="filteredHomeValueGrowth.length === 0" class="empty">No data</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="panel">
+					<div class="panel-header">
+						<div class="panel-title">Rent-to-Home-Value Ratio</div>
+						<div class="range">
+							<span class="range-label">Rent to Home Value</span>
+							<el-slider v-model="rentToValueRange" range :min="rentToValueMin" :max="rentToValueMax" :step="0.0001" :show-tooltip="false" style="width: 280px" />
+							<span class="range-value">{{ formatPercent(rentToValueRange[0]) }} - {{ formatPercent(rentToValueRange[1]) }}</span>
+						</div>
+					</div>
+					<div class="panel-body">
+						<div class="bar-list">
+							<div v-for="(row, idx) in filteredRentToValue" :key="row.metro + idx" class="bar-row">
+								<span class="bar-label">{{ row.metro }}</span>
+								<div class="bar-wrap">
+									<div class="bar" :style="{ width: ((row.avg_rent_to_home_value || 0) / (maxRentToValue || 1) * 100) + '%', backgroundColor: barColor(idx) }"></div>
+								</div>
+								<span class="bar-val">{{ formatPercent(row.avg_rent_to_home_value) }}</span>
+							</div>
+							<div v-if="filteredRentToValue.length === 0" class="empty">No data</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="panel">
+					<div class="panel-header">
+						<div class="panel-title">% of Population Growth</div>
+					</div>
+					<div class="panel-body">
+						<div class="table-header population-growth">
+							<span class="col-metro">Metro</span>
+							<span class="col-base">Base Year Pop.</span>
+							<span class="col-current">Current Year Pop.</span>
+							<span class="col-rate"></span>
+						</div>
+						<div class="table-body">
+							<div v-for="(row, idx) in filteredPopulationGrowth" :key="row.metro + idx" class="table-row population-growth">
+								<span class="col-metro">{{ row.metro }}</span>
+								<span class="col-base">{{ formatNumber(row.base_year_population) }}</span>
+								<span class="col-current">{{ formatNumber(row.current_year_population) }}</span>
+								<span class="col-rate">
+									<div class="bar-line">
+										<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxPopulationGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+										<span class="bar-text">{{ formatPercent(row.growth_rate) }}</span>
+									</div>
+								</span>
+							</div>
+							<div v-if="filteredPopulationGrowth.length === 0" class="empty">No data</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="panel">
+					<div class="panel-header">
+						<div class="panel-title">Home Value</div>
+						<div class="range">
+							<span class="range-label">Home Value</span>
+							<el-slider v-model="homeValueRange" range :min="homeValueMin" :max="homeValueMax" :step="1000" :show-tooltip="false" style="width: 280px" />
+							<span class="range-value">{{ formatCurrencyK(homeValueRange[0]) }} - {{ formatCurrencyK(homeValueRange[1]) }}</span>
+						</div>
+					</div>
+					<div class="panel-body">
+						<div class="bar-list">
+							<div v-for="(row, idx) in filteredHomeValue" :key="row.metro + idx" class="bar-row">
+								<span class="bar-label">{{ row.metro }}</span>
+								<div class="bar-wrap">
+									<div class="bar" :style="{ width: ((row.avg_home_value_index || 0) / (maxHomeValue || 1) * 100) + '%', backgroundColor: barColor(idx) }"></div>
+								</div>
+								<span class="bar-val">{{ formatCurrencyK(row.avg_home_value_index) }}</span>
+							</div>
+							<div v-if="filteredHomeValue.length === 0" class="empty">No data</div>
 						</div>
 					</div>
 				</div>
 			</div>
-
-			<ClientOnly>
-				<!-- Custom Tooltip -->
-				<div 
-					v-if="tooltip.visible" 
-					class="custom-tooltip"
-					:style="{ transform: `translate3d(${tooltip.x}px, ${tooltip.y}px, 0)` }"
-				>
-					<div class="tooltip-row">
-						<span class="tooltip-label">Metro:</span>
-						<span class="tooltip-value">{{ tooltip.data.metro }}</span>
-					</div>
-					<div class="tooltip-row">
-						<span class="tooltip-label">City:</span>
-						<span class="tooltip-value">{{ tooltip.data.city }}</span>
-					</div>
-					<div class="tooltip-row">
-						<span class="tooltip-label">Zipcode:</span>
-						<span class="tooltip-value">{{ tooltip.data.zipcode }}</span>
-					</div>
-					
-					<!-- Type Specific Info -->
-					<template v-if="tooltip.type === 'growth'">
-						<div class="tooltip-row">
-							<span class="tooltip-label">Home Value % Increase:</span>
-							<span class="tooltip-value">{{ (tooltip.data.growth_rate || 0).toFixed(1) }}%</span>
-						</div>
-						<div class="tooltip-row" v-if="tooltip.data.base_value">
-							<span class="tooltip-label">Base Year Value:</span>
-							<span class="tooltip-value">${{ Math.round(tooltip.data.base_value / 1000).toLocaleString() }}K</span>
-						</div>
-						<div class="tooltip-row" v-if="tooltip.data.current_value">
-							<span class="tooltip-label">Current Year Value:</span>
-							<span class="tooltip-value">${{ Math.round(tooltip.data.current_value / 1000).toLocaleString() }}K</span>
-						</div>
-					</template>
-
-					<template v-else-if="tooltip.type === 'rent_to_value'">
-						<div class="tooltip-row">
-							<span class="tooltip-label">Rent to Home Value:</span>
-							<span class="tooltip-value">{{ ((tooltip.data.value || 0) * 100).toFixed(1) }}%</span>
-						</div>
-					</template>
-
-					<template v-else-if="tooltip.type === 'home_value'">
-						<div class="tooltip-row">
-							<span class="tooltip-label">Home Value:</span>
-							<span class="tooltip-value">${{ Math.round((tooltip.data.value || 0) / 1000).toLocaleString() }}K</span>
-						</div>
-					</template>
-
-					<template v-else-if="tooltip.type === 'rent'">
-						<div class="tooltip-row">
-							<span class="tooltip-label">Rent:</span>
-							<span class="tooltip-value">${{ Math.round(tooltip.data.value || 0).toLocaleString() }}</span>
-						</div>
-					</template>
-				</div>
-
-				<!-- Charts Section -->
-				<!-- Tab Content Switcher -->
-				<MetroTab 
-					v-if="currentTab === 'Metro'"
-					:rankingData="rankingData"
-					:rentToValueData="rentToValueData"
-					:homeValueData="homeValueData"
-					:rentData="rentData"
-					v-model:rankingBaseYear="rankingBaseYear"
-					v-model:rankingCurrentYear="rankingCurrentYear"
-					:yearList="yearList"
-					:topN="topN"
-					@update:topN="topN = $event"
-					:selectedMetros="selectedMetros"
-					@update:selectedMetros="selectedMetros = $event"
-					:selectedZipcodes="selectedZipcodes"
-					@update:selectedZipcodes="selectedZipcodes = $event"
-					:metroList="metroList"
-					:zipcodeList="zipcodeList"
-					@search:metro="filterMetros"
-					@search:zipcode="filterZipcodes"
-					@showTooltip="showTooltip"
-					@moveTooltip="moveTooltip"
-					@hideTooltip="hideTooltip"
-				/>
-			</ClientOnly>
 		</div>
 	</div>
 </template>
 <script setup lang="ts">
-	import { getZipcodeMetrosList, getZipcodeList, growthRate, zipcodeRank } from "@/api/charts"
-	import { ref, onMounted, watch, computed } from 'vue'
-	import MetroTab from '@/components/Tabs/MetroTab.vue'
+import { getMsaHomeValueGrowthRank, getMsaHomeValueRank, getMsaMetrosList, getMsaPopulationGrowthRank, getMsaRentToValueRank } from "@/api/charts"
+import { computed, onMounted, ref, watch } from "vue"
 
-	const tabs = ['Metro']
-	const currentTab = ref('Metro')
-	
-	const topN = ref(15)
-	const selectedMetros = ref<string[]>([])
-	const selectedZipcodes = ref<string[]>([])
-	
-	// 完整数据列表
-	const fullMetroList = ref<string[]>([])
-	const fullZipcodeList = ref<string[]>([])
-	// 显示的数据列表（限制数量）
-	const metroList = ref<string[]>([])
-	const zipcodeList = ref<string[]>([])
+type MsaHomeValueGrowthItem = {
+	metro: string
+	base_year_value: number
+	current_year_value: number
+	growth_rate: number
+}
 
-	// Ranking Chart Data
-	const rankingData = ref<any[]>([])
-	const rankingBaseYear = ref(2024)
-	const rankingCurrentYear = ref(2025)
-	const yearList = Array.from({ length: 11 }, (_, i) => 2015 + i).reverse() // 2025 down to 2015
+type MsaPopulationGrowthItem = {
+	metro: string
+	base_year_population: number
+	current_year_population: number
+	growth_rate: number
+}
 
-	// Other Charts Data
-	const rentToValueData = ref<any[]>([])
-	const homeValueData = ref<any[]>([])
-	const rentData = ref<any[]>([])
+type MsaRentToValueItem = {
+	metro: string
+	avg_rent_to_home_value: number
+}
 
-	// 搜索过滤方法
-	const filterMetros = (query: string) => {
-		if (query) {
-			metroList.value = fullMetroList.value
-				.filter(item => item.toLowerCase().includes(query.toLowerCase()))
-				.slice(0, 100)
-		} else {
-			metroList.value = fullMetroList.value.slice(0, 50)
-		}
+type MsaHomeValueItem = {
+	metro: string
+	avg_home_value_index: number
+}
+
+const topN = ref(20)
+const selectedMetro = ref<string>("__all__")
+const metroList = ref<string[]>([])
+
+const yearList = Array.from({ length: 31 }, (_, i) => 1996 + i).reverse()
+const baseYear = ref(2020)
+const currentYear = ref(2024)
+
+const populationMax = 20000000
+const minPopulation = ref(1)
+
+const homeValueGrowthData = ref<MsaHomeValueGrowthItem[]>([])
+const populationGrowthData = ref<MsaPopulationGrowthItem[]>([])
+const rentToValueData = ref<MsaRentToValueItem[]>([])
+const homeValueData = ref<MsaHomeValueItem[]>([])
+
+const rentToValueMin = ref(0)
+const rentToValueMax = ref(0.01)
+const rentToValueRange = ref<[number, number]>([0, 0.01])
+
+const homeValueMin = ref(0)
+const homeValueMax = ref(2000000)
+const homeValueRange = ref<[number, number]>([0, 2000000])
+
+const barColors = [
+	"#6a5acd",
+	"#ff7f50",
+	"#1e90ff",
+	"#ffa500",
+	"#2e8b57",
+	"#ff1493",
+	"#20b2aa",
+	"#8b0000",
+	"#708090",
+	"#b8860b",
+	"#00b0ff",
+	"#7c4dff"
+]
+
+const barColor = (index: number) => barColors[index % barColors.length]
+
+const formatNumber = (val: number | undefined | null) => {
+	const num = Number(val)
+	if (!Number.isFinite(num)) return "-"
+	return num.toLocaleString()
+}
+
+const formatCurrencyK = (val: number | undefined | null) => {
+	const num = Number(val)
+	if (!Number.isFinite(num)) return "-"
+	return `$${Math.round(num / 1000).toLocaleString()}K`
+}
+
+const formatPercent = (val: number | undefined | null) => {
+	const num = Number(val)
+	if (!Number.isFinite(num)) return "-"
+	return `${(num * 100).toFixed(2)}%`
+}
+
+const normalizeMetroList = (raw: any): string[] => {
+	const data = raw?.data ?? raw ?? []
+	if (!Array.isArray(data)) return []
+	const mapped = data
+		.map((x: any) => {
+			if (typeof x === "string") return x
+			if (x && typeof x.metro === "string") return x.metro
+			return ""
+		})
+		.filter(Boolean)
+	return Array.from(new Set(mapped))
+}
+
+const fetchMetroList = async () => {
+	try {
+		const res: any = await getMsaMetrosList()
+		metroList.value = normalizeMetroList(res)
+	} catch (err: any) {
+		if (Array.isArray(err)) metroList.value = normalizeMetroList(err)
+		else metroList.value = []
+	}
+}
+
+const fetchAll = async () => {
+	const safeBase = Math.min(baseYear.value, currentYear.value)
+	const safeCurrent = Math.max(baseYear.value, currentYear.value)
+	if (safeBase !== baseYear.value) baseYear.value = safeBase
+	if (safeCurrent !== currentYear.value) currentYear.value = safeCurrent
+
+	const common = {
+		base_year: baseYear.value,
+		current_year: currentYear.value,
+		top: topN.value
 	}
 
-	const filterZipcodes = (query: string) => {
-		if (query) {
-			zipcodeList.value = fullZipcodeList.value
-				.filter(item => item.toLowerCase().includes(query.toLowerCase()))
-				.slice(0, 100)
-		} else {
-			zipcodeList.value = fullZipcodeList.value.slice(0, 50)
-		}
-	}
+	const minPopNum = Number(minPopulation.value) || 1
 
-	const fetchFilterData = async () => {
-		const allOption = "all"
-		
-		// 获取 Metro 列表
-		try {
-			const metroRes: any = await getZipcodeMetrosList()
-			const metros = metroRes?.data || metroRes || []
-			// 添加 (All) 选项
-			fullMetroList.value = Array.isArray(metros) ? [allOption, ...metros] : [allOption]
-			metroList.value = fullMetroList.value.slice(0, 50)
-		} catch (error: any) {
-			// 修复：如果接口直接返回数组，请求封装可能会将其视为错误抛出
-			if (Array.isArray(error)) {
-				fullMetroList.value = [allOption, ...error]
-				metroList.value = fullMetroList.value.slice(0, 50)
-			} else {
-				console.error("Failed to fetch metro data:", error)
-			}
-		}
+	const [growthRes, rentToValueRes, popRes, homeValueRes] = await Promise.all([
+		getMsaHomeValueGrowthRank({ ...common, min_population: minPopNum }),
+		getMsaRentToValueRank({ ...common, min_population: minPopNum }),
+		getMsaPopulationGrowthRank({ ...common, min_avg_population: minPopNum }),
+		getMsaHomeValueRank({ ...common, min_avg_population: minPopNum })
+	])
 
-		// 设置默认选中
-		const defaultMetro = "Austin-Round Rock-Georgetown, TX"
-		if (selectedMetros.value.length === 0) {
-			if (fullMetroList.value.includes(defaultMetro)) {
-				selectedMetros.value = [defaultMetro]
-			} else if (fullMetroList.value.includes(allOption)) {
-				selectedMetros.value = [allOption]
-			}
-		}
+	homeValueGrowthData.value = (growthRes as any)?.data ?? (growthRes as any) ?? []
+	rentToValueData.value = (rentToValueRes as any)?.data ?? (rentToValueRes as any) ?? []
+	populationGrowthData.value = (popRes as any)?.data ?? (popRes as any) ?? []
+	homeValueData.value = (homeValueRes as any)?.data ?? (homeValueRes as any) ?? []
 
-		// 获取 Zipcode 列表
-		try {
-			const zipcodeRes: any = await getZipcodeList()
-			const zipcodes = zipcodeRes?.data || zipcodeRes || []
-			// 添加 (All) 选项
-			fullZipcodeList.value = Array.isArray(zipcodes) ? [allOption, ...zipcodes] : [allOption]
-			zipcodeList.value = fullZipcodeList.value.slice(0, 50)
-		} catch (error: any) {
-			if (Array.isArray(error)) {
-				fullZipcodeList.value = [allOption, ...error]
-				zipcodeList.value = fullZipcodeList.value.slice(0, 50)
-			} else {
-				console.error("Failed to fetch zipcode data:", error)
-			}
-		}
+	const rentVals = rentToValueData.value.map(x => Number(x.avg_rent_to_home_value) || 0)
+	const rentMin = rentVals.length ? Math.min(...rentVals) : 0
+	const rentMax = rentVals.length ? Math.max(...rentVals) : 0.01
+	rentToValueMin.value = Math.max(0, rentMin)
+	rentToValueMax.value = Math.max(rentToValueMin.value + 0.0001, rentMax || 0.01)
+	rentToValueRange.value = [rentToValueMin.value, rentToValueMax.value]
 
-		// 设置 Zipcode 默认选中 (All)
-		if (fullZipcodeList.value.includes(allOption) && selectedZipcodes.value.length === 0) {
-			selectedZipcodes.value = [allOption]
-		}
-	}
+	const hvVals = homeValueData.value.map(x => Number(x.avg_home_value_index) || 0)
+	const hvMin = hvVals.length ? Math.min(...hvVals) : 0
+	const hvMax = hvVals.length ? Math.max(...hvVals) : 2000000
+	homeValueMin.value = Math.max(0, hvMin)
+	homeValueMax.value = Math.max(homeValueMin.value + 1000, hvMax || 2000000)
+	homeValueRange.value = [homeValueMin.value, homeValueMax.value]
+}
 
-	const fetchRankingData = async () => {
-		try {
-			// 处理参数
-			const metros = (selectedMetros.value.includes('all') || selectedMetros.value.includes('(All)')) ? '' : selectedMetros.value.join(',')
-			const zipcodes = (selectedZipcodes.value.includes('all') || selectedZipcodes.value.includes('(All)')) ? '' : selectedZipcodes.value.join(',')
-			
-			const params = {
-				base_year: rankingBaseYear.value,
-				current_year: rankingCurrentYear.value,
-				metro: metros,
-				zipcode: zipcodes,
-				top: topN.value
-			}
-			
-			const res: any = await growthRate(params)
-			rankingData.value = res?.data || res || []
-		} catch (error) {
-			console.error("Failed to fetch ranking data:", error)
-			rankingData.value = []
-		}
-	}
+let debounceTimer: any = null
+const debouncedFetch = () => {
+	if (debounceTimer) clearTimeout(debounceTimer)
+	debounceTimer = setTimeout(() => {
+		fetchAll().catch(() => null)
+	}, 500)
+}
 
-	const fetchOtherChartsData = async () => {
-		try {
-			const metros = (selectedMetros.value.includes('all') || selectedMetros.value.includes('(All)')) ? '' : selectedMetros.value.join(',')
-			const zipcodes = (selectedZipcodes.value.includes('all') || selectedZipcodes.value.includes('(All)')) ? '' : selectedZipcodes.value.join(',')
-			const baseParams = {
-				metro: metros,
-				zipcode: zipcodes,
-				top: topN.value,
-				current_year: rankingCurrentYear.value
-			}
+watch([topN, baseYear, currentYear, minPopulation], () => debouncedFetch())
 
-			// Rent to Home Value
-			const rentToValueRes: any = await zipcodeRank({ ...baseParams, dimension: 'rent_to_value' })
-			rentToValueData.value = rentToValueRes?.data || rentToValueRes || []
+onMounted(async () => {
+	await fetchMetroList()
+	await fetchAll()
+})
 
-			// Home Value
-			const homeValueRes: any = await zipcodeRank({ ...baseParams, dimension: 'home_value' })
-			homeValueData.value = homeValueRes?.data || homeValueRes || []
+const applyMetroFilter = <T extends { metro: string }>(rows: T[]) => {
+	if (selectedMetro.value === "__all__") return rows
+	return rows.filter(r => r.metro === selectedMetro.value)
+}
 
-			// Rent
-			const rentRes: any = await zipcodeRank({ ...baseParams, dimension: 'rent' })
-			rentData.value = rentRes?.data || rentRes || []
+const maxHomeValueGrowthRate = computed(() => {
+	const vals = filteredHomeValueGrowth.value.map(x => Math.abs(Number(x.growth_rate) || 0))
+	return Math.max(0.0001, ...vals)
+})
 
-		} catch (error) {
-			console.error("Failed to fetch other charts data:", error)
-		}
-	}
+const maxPopulationGrowthRate = computed(() => {
+	const vals = filteredPopulationGrowth.value.map(x => Math.abs(Number(x.growth_rate) || 0))
+	return Math.max(0.0001, ...vals)
+})
 
-	// Tooltip State
-	const tooltip = ref({
-		visible: false,
-		x: 0,
-		y: 0,
-		data: null as any,
-		type: ''
+const maxRentToValue = computed(() => {
+	const vals = filteredRentToValue.value.map(x => Number(x.avg_rent_to_home_value) || 0)
+	return Math.max(0.0001, ...vals)
+})
+
+const maxHomeValue = computed(() => {
+	const vals = filteredHomeValue.value.map(x => Number(x.avg_home_value_index) || 0)
+	return Math.max(1, ...vals)
+})
+
+const toPercentWidth = (value: number, maxValue: number) => {
+	const v = Math.abs(Number(value) || 0)
+	const m = Number(maxValue) || 1
+	return Math.min(100, (v / m) * 100)
+}
+
+const filteredHomeValueGrowth = computed(() => applyMetroFilter(homeValueGrowthData.value))
+const filteredPopulationGrowth = computed(() => applyMetroFilter(populationGrowthData.value))
+
+const filteredRentToValue = computed(() => {
+	const rows = applyMetroFilter(rentToValueData.value)
+	const [minV, maxV] = rentToValueRange.value
+	return rows.filter(r => {
+		const v = Number(r.avg_rent_to_home_value) || 0
+		return v >= minV && v <= maxV
 	})
+})
 
-	let tooltipTimeout: any = null
-
-	const showTooltip = (event: MouseEvent, item: any, type: string) => {
-		if (tooltipTimeout) {
-			clearTimeout(tooltipTimeout)
-			tooltipTimeout = null
-		}
-		tooltip.value.visible = true
-		tooltip.value.data = item
-		tooltip.value.type = type
-		updateTooltipPosition(event)
-	}
-
-	const moveTooltip = (event: MouseEvent) => {
-		updateTooltipPosition(event)
-	}
-
-	const updateTooltipPosition = (event: MouseEvent) => {
-		const offset = 15
-		const tooltipWidth = 320 // Estimated max width
-		const tooltipHeight = 220 // Estimated max height
-		
-		let x = event.clientX + offset
-		let y = event.clientY + offset
-		
-		// Check horizontal overflow
-		if (x + tooltipWidth > window.innerWidth) {
-			x = event.clientX - tooltipWidth - offset
-		}
-		
-		// Check vertical overflow
-		if (y + tooltipHeight > window.innerHeight) {
-			y = event.clientY - tooltipHeight - offset
-		}
-		
-		tooltip.value.x = x
-		tooltip.value.y = y
-	}
-
-	const hideTooltip = () => {
-		tooltipTimeout = setTimeout(() => {
-			tooltip.value.visible = false
-		}, 100)
-	}
-
-	// Debounce Logic
-	let debounceTimer: any = null
-	
-	const debouncedFetch = () => {
-		if (debounceTimer) clearTimeout(debounceTimer)
-		debounceTimer = setTimeout(() => {
-			fetchRankingData()
-			fetchOtherChartsData()
-		}, 2000)
-	}
-
-	// Watchers for Ranking Chart
-	watch([rankingBaseYear, rankingCurrentYear, topN, selectedMetros, selectedZipcodes], () => {
-		debouncedFetch()
+const filteredHomeValue = computed(() => {
+	const rows = applyMetroFilter(homeValueData.value)
+	const [minV, maxV] = homeValueRange.value
+	return rows.filter(r => {
+		const v = Number(r.avg_home_value_index) || 0
+		return v >= minV && v <= maxV
 	})
-
-	onMounted(async () => {
-		await fetchFilterData()
-		await fetchRankingData()
-		await fetchOtherChartsData()
-	})
+})
 </script>
 <style scoped lang="scss">
-	.matechat-box {
+	.msa-page {
 		width: 100%;
-		height: 100vh;
-		padding: 0;
-		overflow: hidden;
-		box-sizing: border-box;
-		display: flex;
-		flex-direction: column;
-		background-color: #fff;
+		min-height: 100vh;
+		background: #fff;
 	}
 
-	.matechat-container {
-		position: relative;
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		overflow: auto;
-		min-height: 0;
+	.msa-container {
 		max-width: 1440px;
 		margin: 0 auto;
-		width: 100%;
-
-		/* Hide scrollbar */
-		&::-webkit-scrollbar {
-			display: none;
-		}
-		-ms-overflow-style: none;
-		scrollbar-width: none;
+		padding: 18px 20px 24px;
 	}
 
 	.header-section {
-		width: 100%;
-		padding: 20px 20px 10px;
 		text-align: center;
+		margin-bottom: 10px;
 
 		.title {
-			font-size: 32px;
+			font-size: 22px;
 			font-weight: 700;
-			color: #1a1a1a;
-			margin: 0 0 8px 0;
-			line-height: 1.2;
-		}
-
-		.subtitle {
-			font-size: 16px;
-			color: #666;
-			font-weight: 400;
 			margin: 0;
-			line-height: 1.5;
-			max-width: 1200px;
-			margin: 0 auto;
+			color: #1a1a1a;
 		}
 	}
 
-	.metrics-container {
+	.filter-bar {
 		display: flex;
+		flex-wrap: wrap;
+		gap: 12px 18px;
+		align-items: center;
 		justify-content: center;
-		padding: 0 20px;
-		margin-bottom: 15px;
-	}
-
-	.metrics-bar {
-		display: flex;
-		align-items: center;
-		background-color: #f8f9fa;
-		padding: 4px;
-		border-radius: 12px;
+		padding: 10px 14px;
 		border: 1px solid #eee;
-		box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+		border-radius: 10px;
+		background: #fafafa;
+		margin-bottom: 16px;
 	}
 
-	.metric-label {
-		padding: 8px 20px;
-		font-weight: 600;
-		color: #333;
-		font-size: 14px;
-		user-select: none;
-	}
-
-	.tabs-wrapper {
+	.filter-group {
 		display: flex;
-		gap: 4px;
-	}
-
-	.metric-item {
-		padding: 8px 20px;
-		cursor: pointer;
-		border-radius: 8px;
-		font-size: 14px;
-		color: #666;
-		transition: all 0.2s ease;
-		font-weight: 500;
-		user-select: none;
-
-		&:hover {
-			color: #000;
-			background-color: rgba(0, 0, 0, 0.05);
-		}
-
-		&.active {
-			background-color: #fff;
-			color: #000;
-			font-weight: 600;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-		}
-	}
-
-	.filter-section {
-		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		padding: 15px 40px;
-		border-bottom: 1px solid #f0f0f0;
-		background-color: #fff;
+		gap: 10px;
 
-		.section-title {
-			font-size: 18px;
+		.label {
+			font-size: 13px;
 			color: #333;
 			font-weight: 600;
+			white-space: nowrap;
 		}
 
-		.controls {
-			display: flex;
-			align-items: center;
-			gap: 24px;
+		.value {
+			font-size: 12px;
+			color: #666;
+			min-width: 80px;
+			text-align: right;
+			white-space: nowrap;
+		}
 
-			.control-item {
-				display: flex;
-				align-items: center;
-				gap: 12px;
-
-				.label {
-					font-size: 14px;
-					color: #666;
-					font-weight: 500;
-				}
-			}
+		&.wide {
+			min-width: 360px;
 		}
 	}
-	
+
 	:deep(.el-input-number.w-20) {
-		width: 100px;
+		width: 90px;
 	}
 
-	.custom-option-item {
+	.grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 18px;
+	}
+
+	.panel {
+		border: 1px solid #eee;
+		border-radius: 10px;
+		background: #fff;
+		overflow: hidden;
+		min-height: 380px;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.panel-header {
 		display: flex;
 		align-items: center;
-		width: 100%;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 12px 14px;
+		border-bottom: 1px solid #f1f1f1;
 	}
 
-	.option-text {
+	.panel-title {
+		font-size: 14px;
+		font-weight: 700;
+		color: #333;
+	}
+
+	.range {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+
+	.range-label {
+		font-size: 12px;
+		color: #666;
+		white-space: nowrap;
+	}
+
+	.range-value {
+		font-size: 12px;
+		color: #666;
+		white-space: nowrap;
+	}
+
+	.panel-body {
+		padding: 10px 12px 12px;
 		flex: 1;
+		min-height: 0;
+	}
+
+	.table-header {
+		display: flex;
+		align-items: center;
+		font-size: 12px;
+		color: #888;
+		padding: 6px 4px 8px;
+		border-bottom: 1px solid #eee;
+		font-weight: 600;
+	}
+
+	.table-body {
+		overflow: auto;
+		max-height: 560px;
+		min-height: 0;
+	}
+
+	.table-row {
+		display: flex;
+		align-items: center;
+		padding: 7px 4px;
+		border-bottom: 1px solid #fafafa;
+		font-size: 13px;
+		color: #333;
+
+		&:hover {
+			background: #f7f8fb;
+		}
+	}
+
+	.home-value-gain,
+	.population-growth {
+		.col-metro {
+			flex: 1;
+			min-width: 180px;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			padding-right: 10px;
+		}
+
+		.col-base,
+		.col-current {
+			width: 110px;
+			white-space: nowrap;
+			text-align: right;
+			color: #666;
+		}
+
+		.col-rate {
+			width: 190px;
+			padding-left: 10px;
+		}
+	}
+
+	.bar-line {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.bar-wrap {
+		flex: 1;
+		height: 12px;
+		background: #f2f2f2;
+		border-radius: 6px;
+		overflow: hidden;
+	}
+
+	.bar {
+		height: 100%;
+		border-radius: 6px;
+		min-width: 2px;
+	}
+
+	.bar-text {
+		font-size: 12px;
+		color: #666;
+		white-space: nowrap;
+		min-width: 58px;
+		text-align: right;
+	}
+
+	.bar-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		overflow: auto;
+		max-height: 560px;
+		min-height: 0;
+		padding-right: 4px;
+	}
+
+	.bar-row {
+		display: grid;
+		grid-template-columns: 1fr 220px 70px;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.bar-label {
+		font-size: 12px;
+		color: #666;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
-	// Charts Section Styles
-	.charts-section {
-		padding: 20px 40px;
-		margin-bottom: 20px;
-		
-		.chart-row {
-			display: grid;
-			grid-template-columns: repeat(2, 1fr);
-			gap: 20px;
-		}
-		
-		.chart-item {
-			background: #fff;
-			border-radius: 8px;
-			// border: 1px solid #eee;
-			// padding: 15px;
-			min-height: 400px;
-			
-			&.placeholder {
-				border: 2px dashed #eee;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				color: #ccc;
-			}
-		}
-	}
-
-	.chart-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: 15px;
-		flex-wrap: wrap;
-		gap: 10px;
-		
-		h3 {
-			font-size: 16px;
-			font-weight: 600;
-			color: #333;
-			margin: 0;
-			flex: 1;
-		}
-		
-		.chart-filters {
-			display: flex;
-			gap: 10px;
-			
-			.year-filter {
-				display: flex;
-				align-items: center;
-				gap: 5px;
-				
-				span {
-					font-size: 12px;
-					color: #666;
-				}
-			}
-		}
-	}
-
-	.ranking-table-header {
-		display: flex;
-		padding-bottom: 8px;
-		border-bottom: 1px solid #eee;
+	.bar-val {
 		font-size: 12px;
-		color: #666;
-		font-weight: 500;
-		
-		span {
-			padding: 0 4px;
-		}
-		
-		.col-zip { width: 15%; }
-		.col-city { width: 20%; }
-		.col-metro { width: 40%; }
-		.col-growth { width: 25%; text-align: right; }
+		color: #444;
+		white-space: nowrap;
+		text-align: right;
 	}
 
-	.ranking-table-body {
-		max-height: 560px;
-		overflow-y: auto;
-		
-		/* Hide scrollbar */
-		&::-webkit-scrollbar {
-			display: none;
-		}
-		-ms-overflow-style: none;
-		scrollbar-width: none;
-		
-		.ranking-row {
-			display: flex;
-			align-items: center;
-			padding: 6px 0;
-			font-size: 13px;
-			color: #333;
-			border-bottom: 1px solid #f9f9f9;
-			
-			&:hover {
-				background-color: #f8f9fa;
-			}
-			
-			span {
-				padding: 0 4px;
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
-			}
-			
-			.col-zip { width: 15%; color: #666; }
-			.col-city { width: 20%; }
-			.col-metro { width: 40%; color: #666; font-size: 12px; }
-			.col-growth { 
-				width: 25%; 
-				display: flex; 
-				justify-content: flex-end;
-			}
-		}
-	}
-
-	.custom-tooltip {
-		position: fixed;
-		top: 0;
-		left: 0;
-		background-color: #fff;
-		border: 1px solid #e0e0e0;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-		padding: 12px;
-		border-radius: 4px;
-		z-index: 9999;
-		pointer-events: none;
-		font-size: 13px;
-		min-width: 200px;
-		max-width: 320px;
-		will-change: transform;
-		
-		.tooltip-row {
-			display: flex;
-			justify-content: space-between;
-			margin-bottom: 6px;
-			
-			&:last-child {
-				margin-bottom: 0;
-			}
-			
-			.tooltip-label {
-				color: #666;
-				margin-right: 12px;
-			}
-			
-			.tooltip-value {
-				color: #333;
-				font-weight: 500;
-				text-align: right;
-			}
-		}
-	}
-
-	.diverging-bar-container {
-		display: flex;
-		align-items: center;
-		width: 100%;
-		height: 100%;
-		
-		.axis-line {
-			width: 1px;
-			height: 100%;
-			background-color: #eee;
-			margin: 0 4px;
-		}
-		
-		.bar-side {
-			flex: 1;
-			display: flex;
-			align-items: center;
-			min-width: 0; /* Prevents overflow */
-			
-			&.left {
-				justify-content: flex-end;
-				
-				.growth-bar {
-					border-top-left-radius: 2px;
-					border-bottom-left-radius: 2px;
-					background-color: #f06292; /* Pink/Red for negative */
-				}
-				
-				.growth-text {
-					margin-right: 4px;
-				}
-			}
-			
-			&.right {
-				justify-content: flex-start;
-				
-				.growth-bar {
-					border-top-right-radius: 2px;
-					border-bottom-right-radius: 2px;
-					background-color: #81c784; /* Green for positive */
-				}
-				
-				.growth-text {
-					margin-left: 4px;
-				}
-			}
-		}
-		
-		.growth-bar {
-			height: 12px;
-			min-width: 2px;
-		}
-		
-		.growth-text {
-			font-size: 12px;
-			color: #333;
-			white-space: nowrap;
-		}
-	}
-
-	.growth-bar-container {
-		display: flex;
-		align-items: center;
-		justify-content: flex-start;
-		width: 100%;
-		gap: 8px;
-		
-		.growth-bar {
-			height: 16px;
-			border-radius: 2px;
-			min-width: 2px;
-			
-			&.positive {
-				background-color: #4db6ac; // Teal for positive
-			}
-			
-			&.negative {
-				background-color: #e57373; // Red for negative
-			}
-		}
-		
-		.growth-text {
-			font-size: 12px;
-			color: #333;
-			min-width: 40px;
-			text-align: left;
-			white-space: nowrap;
-		}
-	}
-
-	.no-data {
-		padding: 20px;
+	.empty {
+		padding: 18px 0;
 		text-align: center;
 		color: #999;
-		font-size: 14px;
+		font-size: 13px;
 	}
 
-	/* Fix for Select Height Issue */
-	.controls {
-		:deep(.el-select__tags-text) {
-			display: inline-block;
-			max-width: 140px;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-			vertical-align: middle;
+	@media (max-width: 1100px) {
+		.grid {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>
