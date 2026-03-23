@@ -42,7 +42,7 @@ export function zipcodeRank(data?: any) {
    * MSA所有相关： 获取所有大都会区记录
    */
 export function getMsaMetrosList(data?: any) {
-  return useClientRequestDirect.post("/charts/msa/metros", data)
+  return useClientRequestDirect.get("/charts/msa/metros", data)
 }
 
 
