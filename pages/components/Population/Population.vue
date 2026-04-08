@@ -79,8 +79,9 @@
 					<div class="panel-header">% Net Population Growth According to Migration Pattern</div>
 					<div class="panel-body chart-body" ref="migrationChartRef"></div>
 				</div>
-				<div class="chart-container placeholder-box">
-					<div class="placeholder-text">Population Density (Current Year) Placeholder</div>
+				<div class="chart-container panel">
+					<div class="panel-header">Population Density (Current Year)</div>
+					<div class="panel-body chart-body" ref="densityChartRef"></div>
 				</div>
 			</div>
 		</div>
@@ -89,7 +90,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
-import { getMsaMetrosList, getRrowthTrend, getNetMigrationTrend } from "@/api/charts"
+import { getMsaMetrosList, getRrowthTrend, getNetMigrationTrend, getPopulationDensity } from "@/api/charts"
 import * as echarts from 'echarts'
 import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 
@@ -103,6 +104,9 @@ let growthChart: echarts.ECharts | null = null
 
 const migrationChartRef = ref<HTMLElement | null>(null)
 let migrationChart: echarts.ECharts | null = null
+
+const densityChartRef = ref<HTMLElement | null>(null)
+let densityChart: echarts.ECharts | null = null
 
 const selectedMetrosValue = computed({
 	get: () => selectedMetros.value,
@@ -194,9 +198,13 @@ const initChart = () => {
 	if (migrationChartRef.value) {
 		migrationChart = echarts.init(migrationChartRef.value)
 	}
+	if (densityChartRef.value) {
+		densityChart = echarts.init(densityChartRef.value)
+	}
 	window.addEventListener('resize', () => {
 		growthChart?.resize()
 		migrationChart?.resize()
+		densityChart?.resize()
 	})
 }
 
@@ -407,9 +415,85 @@ const updateMigrationChart = async () => {
 	}
 }
 
+const updateDensityChart = async () => {
+	if (!densityChart) return
+	
+	try {
+		const params = {
+			year: yearRange.value[1],
+			metro: selectedMetros.value,
+			top: 10
+		}
+		
+		const res: any = await getPopulationDensity(params)
+		const data = res?.data ?? []
+		
+		if (!data.length) {
+			densityChart.clear()
+			return
+		}
+
+		// Use graph layout: force to simulate bubble packing
+		const nodes = data.map((item: any, index: number) => {
+			const color = metroColorsMap[item.metro] || colors[index % colors.length]
+			return {
+				name: item.metro,
+				value: item.population_density,
+				symbolSize: Math.sqrt(item.population_density) * 8, // Adjust scale factor as needed
+				itemStyle: {
+					color,
+					opacity: 0.9
+				},
+				label: {
+					show: true,
+					formatter: (params: any) => {
+						const name = params.name.length > 20 ? params.name.substring(0, 17) + '...' : params.name
+						return `${name}\n${params.value}`
+					},
+					fontSize: 10,
+					color: '#333',
+					fontWeight: 600
+				}
+			}
+		})
+
+		const option = {
+			tooltip: {
+				formatter: (params: any) => {
+					const item = data.find((d: any) => d.metro === params.name)
+					return `<div style="font-size: 12px;">
+						<div style="font-weight: 600; margin-bottom: 4px;">${params.name}</div>
+						<div style="color: #666;">Population Density: <span style="font-weight: 600; color: #333;">${item.population_density}</span></div>
+						<div style="color: #666;">Population: <span style="font-weight: 600; color: #333;">${item.population.toLocaleString()}</span></div>
+					</div>`
+				}
+			},
+			series: [{
+				type: 'graph',
+				layout: 'force',
+				animation: true,
+				force: {
+					repulsion: 100,
+					gravity: 0.1,
+					edgeLength: 10,
+					layoutAnimation: true
+				},
+				data: nodes,
+				roam: true,
+				draggable: true
+			}]
+		}
+		
+		densityChart.setOption(option, true)
+	} catch (err) {
+		console.error("Failed to update density chart:", err)
+	}
+}
+
 const updateAllCharts = () => {
 	updateGrowthChart()
 	updateMigrationChart()
+	updateDensityChart()
 }
 
 watch([selectedMetros, yearRange], () => {
@@ -426,9 +510,11 @@ onUnmounted(() => {
 	window.removeEventListener('resize', () => {
 		growthChart?.resize()
 		migrationChart?.resize()
+		densityChart?.resize()
 	})
 	growthChart?.dispose()
 	migrationChart?.dispose()
+	densityChart?.dispose()
 })
 </script>
 
