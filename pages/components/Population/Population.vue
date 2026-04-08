@@ -75,8 +75,9 @@
 				</div>
 			</div>
 			<div class="bottom-row">
-				<div class="chart-container placeholder-box">
-					<div class="placeholder-text">% Net Population Growth According to Migration Pattern Placeholder</div>
+				<div class="chart-container panel">
+					<div class="panel-header">% Net Population Growth According to Migration Pattern</div>
+					<div class="panel-body chart-body" ref="migrationChartRef"></div>
 				</div>
 				<div class="chart-container placeholder-box">
 					<div class="placeholder-text">Population Density (Current Year) Placeholder</div>
@@ -88,7 +89,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
-import { getMsaMetrosList, getRrowthTrend } from "@/api/charts"
+import { getMsaMetrosList, getRrowthTrend, getNetMigrationTrend } from "@/api/charts"
 import * as echarts from 'echarts'
 import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 
@@ -99,6 +100,9 @@ const isLegendExpanded = ref(false)
 
 const growthChartRef = ref<HTMLElement | null>(null)
 let growthChart: echarts.ECharts | null = null
+
+const migrationChartRef = ref<HTMLElement | null>(null)
+let migrationChart: echarts.ECharts | null = null
 
 const selectedMetrosValue = computed({
 	get: () => selectedMetros.value,
@@ -184,12 +188,19 @@ const displayedMetrosData = computed(() => {
 })
 
 const initChart = () => {
-	if (!growthChartRef.value) return
-	growthChart = echarts.init(growthChartRef.value)
-	window.addEventListener('resize', () => growthChart?.resize())
+	if (growthChartRef.value) {
+		growthChart = echarts.init(growthChartRef.value)
+	}
+	if (migrationChartRef.value) {
+		migrationChart = echarts.init(migrationChartRef.value)
+	}
+	window.addEventListener('resize', () => {
+		growthChart?.resize()
+		migrationChart?.resize()
+	})
 }
 
-const updateChart = async () => {
+const updateGrowthChart = async () => {
 	if (!growthChart) return
 	
 	try {
@@ -284,23 +295,140 @@ const updateChart = async () => {
 		
 		growthChart.setOption(option, true)
 	} catch (err) {
-		console.error("Failed to update chart:", err)
+		console.error("Failed to update growth chart:", err)
 	}
 }
 
+const updateMigrationChart = async () => {
+	if (!migrationChart) return
+	
+	try {
+		const params = {
+			base_year: yearRange.value[0],
+			current_year: yearRange.value[1],
+			metro: selectedMetros.value,
+			top: 10
+		}
+		
+		const res: any = await getNetMigrationTrend(params)
+		const data = res?.data ?? []
+		
+		if (!data.length) {
+			migrationChart.clear()
+			return
+		}
+
+		const years = Array.from(new Set(data.flatMap((m: any) => m.data.map((d: any) => d.year)))).sort((a: any, b: any) => a - b)
+		
+		const series = data.map((m: any, index: number) => {
+			const color = metroColorsMap[m.metro] || colors[index % colors.length]
+			
+			// Find max and min points for labels
+			const values = m.data.map((d: any) => d.net_growth_pct)
+			const maxVal = Math.max(...values)
+			const minVal = Math.min(...values)
+			
+			return {
+				name: m.metro,
+				type: 'line',
+				smooth: true,
+				data: years.map(y => {
+					const point = m.data.find((d: any) => d.year === y)
+					if (!point || point.net_growth_pct === undefined) return null
+					return (point.net_growth_pct * 100).toFixed(2)
+				}),
+				itemStyle: { color },
+				lineStyle: { width: 2 },
+				symbol: 'circle',
+				symbolSize: 4,
+				markPoint: {
+					symbol: 'none',
+					data: [
+						{ type: 'max', name: 'Max' },
+						{ type: 'min', name: 'Min' }
+					],
+					label: {
+						show: true,
+						position: 'top',
+						formatter: (params: any) => `${params.value}%`,
+						fontSize: 10,
+						color: '#333'
+					}
+				}
+			}
+		})
+
+		const option = {
+			tooltip: {
+				trigger: 'axis',
+				formatter: (params: any) => {
+					let html = `<div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">${params[0].axisValue}</div>`
+					params.forEach((p: any) => {
+						if (p.value !== null && p.value !== undefined) {
+							html += `<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 2px;">
+								<span style="width: 8px; height: 8px; border-radius: 50%; background: ${p.color}"></span>
+								<span style="flex: 1; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">${p.seriesName}</span>
+								<span style="font-weight: 600;">${p.value}%</span>
+							</div>`
+						}
+					})
+					return html
+				}
+			},
+			grid: {
+				top: '15%',
+				left: '5%',
+				right: '5%',
+				bottom: '10%',
+				containLabel: true
+			},
+			xAxis: {
+				type: 'category',
+				data: years,
+				axisLine: { lineStyle: { color: '#eee' } },
+				axisLabel: { color: '#666', fontSize: 11 },
+				boundaryGap: false
+			},
+			yAxis: {
+				type: 'value',
+				axisLabel: { 
+					color: '#666', 
+					fontSize: 11,
+					formatter: '{value}%'
+				},
+				splitLine: { lineStyle: { color: '#f5f5f5' } }
+			},
+			series
+		}
+		
+		migrationChart.setOption(option, true)
+	} catch (err) {
+		console.error("Failed to update migration chart:", err)
+	}
+}
+
+const updateAllCharts = () => {
+	updateGrowthChart()
+	updateMigrationChart()
+}
+
 watch([selectedMetros, yearRange], () => {
-	updateChart()
+	updateAllCharts()
 })
 
 onMounted(async () => {
 	initChart()
 	await fetchMetroList()
-	updateChart()
+	updateAllCharts()
 })
 
 onUnmounted(() => {
-	window.removeEventListener('resize', () => growthChart?.resize())
+	window.removeEventListener('resize', () => {
+		growthChart?.resize()
+		migrationChart?.resize()
+	})
 	growthChart?.dispose()
+	migrationChart?.dispose()
 })
 </script>
 
