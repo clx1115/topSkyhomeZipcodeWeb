@@ -77,3 +77,84 @@ export function getMsaRentToValueRank(data?: any) {
 export function getMsaHomeValueGrowthRank(data?: any) {
   return useClientRequestDirect.post("/charts/msa/growth-rate", data)
 }
+
+
+
+/**
+   * 
+   * MSA 增长趋势数据
+   */
+export function getRrowthTrend(data?: any) {
+  return useClientRequestDirect.post("/charts/msa/growth-trend", data)
+}
+
+
+/**
+   * 
+   * MSA 迁移净增长趋势数据
+   */
+export function getNetMigrationTrend(data?: any) {
+  return useClientRequestDirect.post("/charts/msa/net-migration-trend", data)
+}
+
+/**
+   * 
+   * MSA 人口密度数据
+   */
+export function getPopulationDensity(data?: any) {
+  return useClientRequestDirect.post("/charts/msa/population-density", data)
+}
+
+/**
+   * 
+   * MSA 种族人口结构数据
+   */
+export function getRaceDemographics(data?: any) {
+  return useClientRequestDirect.post("/charts/msa/race-demographics", data)
+}
+
+
+/**
+   * 
+   * 获取所有种族分类
+   */
+export function getRaces(data?: any) {
+  return useClientRequestDirect.get("/charts/msa/races", data)
+}
+
+/**
+   * 
+   * 全美种族人口结构数据
+   */
+export function getNationalRaceDemographics(data?: any) {
+  return useClientRequestDirect.post("/charts/msa/national-race-demographics", data)
+}
+
+/**
+   * 
+   * MSA 年龄结构数据
+   */
+export function getAgeDemographics(data?: any) {
+  return useClientRequestDirect.post("/charts/msa/age-demographics", data)
+}
+
+
+/**
+   * 
+   * 获取所有年龄段分类
+   */
+export function getAgeGroups(data?: any) {
+  return useClientRequestDirect.get("/charts/msa/age-groups", data)
+}
+
+
+/**
+   * 
+   * 全美年龄结构汇总数据
+   */
+export function getNationalAgeDemographics(data?: any) {
+  return useClientRequestDirect.post("/charts/msa/national-age-demographics", data)
+}
+
+
+

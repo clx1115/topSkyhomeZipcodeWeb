@@ -2,171 +2,226 @@
 	<div class="msa-page">
 		<div class="msa-container">
 			<div class="header-section">
-				<h1 class="title">Housing Related MSA Metrics (Top {{ topN }})</h1>
+				<h1 class="title">Housing Data By Metropolitan Statistical Area(MSA)</h1>
+				<p class="subtitle">Narrow down your investment region by comparing data for different metropolitan area.</p>
 			</div>
 
-			<div class="filter-bar">
-				<div class="filter-group">
-					<span class="label">Top n</span>
-					<el-input-number v-model="topN" :min="1" :max="100" controls-position="right" class="w-20" />
-				</div>
-
-				<div class="filter-group">
-					<span class="label">Metro</span>
-					<el-select v-model="selectedMetro" placeholder="(All)" filterable style="width: 320px">
-						<el-option label="(All)" value="__all__" />
-						<el-option v-for="m in metroList" :key="m" :label="m" :value="m" />
-					</el-select>
-				</div>
-
-				<div class="filter-group wide">
-					<span class="label">Population</span>
-					<el-slider v-model="minPopulation" :min="1000000" :max="populationMax" :step="1" :show-tooltip="false" />
-					<span class="value">{{ formatNumber(minPopulation) }}</span>
-				</div>
-
-				<div class="filter-group">
-					<span class="label">Base Year</span>
-					<el-select v-model="baseYear" style="width: 120px">
-						<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
-					</el-select>
-				</div>
-
-				<div class="filter-group">
-					<span class="label">Current Year</span>
-					<el-select v-model="currentYear" style="width: 120px">
-						<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
-					</el-select>
-				</div>
-			</div>
-
-			<div class="grid">
-				<div class="panel">
-					<div class="panel-header">
-						<div class="panel-title">% of Home Value Gain</div>
-					</div>
-					<div class="panel-body">
-						<div class="table-header home-value-gain">
-							<span class="col-metro">Metro</span>
-							<span class="col-base">Base Year Value</span>
-							<span class="col-current">Current Year Value</span>
-							<span class="col-rate"></span>
+			<div class="metrics-container">
+				<div class="metrics-bar">
+					<div class="tabs-wrapper">
+						<div 
+							v-for="tab in tabs" 
+							:key="tab" 
+							class="metric-item" 
+							:class="{ active: currentTab === tab }"
+							@click="currentTab = tab"
+						>
+							{{ tab }}
 						</div>
-						<div class="table-body">
-							<div v-for="(row, idx) in filteredHomeValueGrowth" :key="row.metro + idx" class="table-row home-value-gain">
-								<span class="col-metro">{{ row.metro }}</span>
-								<span class="col-base">{{ formatCurrencyK(row.base_year_value) }}</span>
-								<span class="col-current">{{ formatCurrencyK(row.current_year_value) }}</span>
-								<span class="col-rate">
-									<div class="bar-line">
-										<div class="bar-wrap">
-											<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxHomeValueGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+					</div>
+				</div>
+			</div>
+
+			<template v-if="currentTab === 'Metrics Rank'">
+				<div class="msa-header-section">
+					<h1 class="title">Housing Related MSA Metrics (Top {{ topN }})</h1>
+				</div>
+
+				<div class="filter-bar">
+					<div class="filter-group">
+						<span class="label">Top n</span>
+						<el-input-number v-model="topN" :min="1" :max="100" controls-position="right" class="w-20" />
+					</div>
+
+					<div class="filter-group">
+						<span class="label">Metro</span>
+						<el-select v-model="selectedMetro" placeholder="(All)" filterable style="width: 320px">
+							<el-option label="(All)" value="__all__" />
+							<el-option v-for="m in metroList" :key="m" :label="m" :value="m" />
+						</el-select>
+					</div>
+
+					<div class="filter-group wide">
+						<span class="label">Population</span>
+						<el-slider v-model="minPopulation" :min="1000000" :max="populationMax" :step="1" :show-tooltip="false" />
+						<span class="value">{{ formatNumber(minPopulation) }}</span>
+					</div>
+
+					<div class="filter-group">
+						<span class="label">Base Year</span>
+						<el-select v-model="baseYear" style="width: 120px">
+							<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
+						</el-select>
+					</div>
+
+					<div class="filter-group">
+						<span class="label">Current Year</span>
+						<el-select v-model="currentYear" style="width: 120px">
+							<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
+						</el-select>
+					</div>
+				</div>
+
+				<div class="grid">
+					<div class="panel">
+						<div class="panel-header">
+							<div class="panel-title">% of Home Value Gain</div>
+						</div>
+						<div class="panel-body">
+							<div class="table-header home-value-gain">
+								<span class="col-metro">Metro</span>
+								<span class="col-base">Base Year Value</span>
+								<span class="col-current">Current Year Value</span>
+								<span class="col-rate"></span>
+							</div>
+							<div class="table-body">
+								<div v-for="(row, idx) in filteredHomeValueGrowth" :key="row.metro + idx" class="table-row home-value-gain">
+									<span class="col-metro">{{ row.metro }}</span>
+									<span class="col-base">{{ formatCurrencyK(row.base_year_value) }}</span>
+									<span class="col-current">{{ formatCurrencyK(row.current_year_value) }}</span>
+									<span class="col-rate">
+										<div class="bar-line">
+											<div class="bar-wrap">
+												<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxHomeValueGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+											</div>
+											<span class="bar-text">{{ formatPercentAuto(row.growth_rate) }}</span>
 										</div>
-										<span class="bar-text">{{ formatPercentAuto(row.growth_rate) }}</span>
-									</div>
-								</span>
-							</div>
-							<div v-if="filteredHomeValueGrowth.length === 0" class="empty">No data</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="panel">
-					<div class="panel-header">
-						<div class="panel-title">Rent-to-Home-Value Ratio</div>
-						<div class="range">
-							<span class="range-label">Rent to Home Value</span>
-							<el-slider v-model="rentToValueRange" range :min="rentToValueMin" :max="rentToValueMax" :step="0.0001" :show-tooltip="false" style="width: 280px" />
-							<span class="range-value">{{ formatPercentRatio(rentToValueRange[0]) }} - {{ formatPercentRatio(rentToValueRange[1]) }}</span>
-						</div>
-					</div>
-					<div class="panel-body">
-						<div class="bar-list">
-							<div v-for="(row, idx) in filteredRentToValue" :key="row.metro + idx" class="bar-row">
-								<span class="bar-label">{{ row.metro }}</span>
-								<div class="bar-wrap">
-									<div class="bar" :style="{ width: ((row.avg_rent_to_home_value || 0) / (maxRentToValue || 1) * 100) + '%', backgroundColor: barColor(idx) }"></div>
+									</span>
 								</div>
-								<span class="bar-val">{{ formatPercentRatio(row.avg_rent_to_home_value) }}</span>
+								<div v-if="filteredHomeValueGrowth.length === 0" class="empty">No data</div>
 							</div>
-							<div v-if="filteredRentToValue.length === 0" class="empty">No data</div>
 						</div>
 					</div>
-				</div>
 
-				<div class="panel">
-					<div class="panel-header">
-						<div class="panel-title">% of Population Growth</div>
-						<div class="year-pickers">
-							<div class="year-picker">
-								<span class="year-label">Base Year</span>
-								<el-select v-model="populationBaseYear" style="width: 110px">
-									<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
-								</el-select>
+					<div class="panel">
+						<div class="panel-header">
+							<div class="panel-title">Rent-to-Home-Value Ratio</div>
+							<div class="range">
+								<span class="range-label">Rent to Home Value</span>
+								<el-slider v-model="rentToValueRange" range :min="rentToValueMin" :max="rentToValueMax" :step="0.0001" :show-tooltip="false" style="width: 280px" />
+								<span class="range-value">{{ formatPercentRatio(rentToValueRange[0]) }} - {{ formatPercentRatio(rentToValueRange[1]) }}</span>
 							</div>
-							<div class="year-picker">
-								<span class="year-label">Current Year</span>
-								<el-select v-model="populationCurrentYear" style="width: 110px">
-									<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
-								</el-select>
+						</div>
+						<div class="panel-body">
+							<div class="bar-list">
+								<div v-for="(row, idx) in filteredRentToValue" :key="row.metro + idx" class="bar-row">
+									<span class="bar-label">{{ row.metro }}</span>
+									<div class="bar-wrap">
+										<div class="bar" :style="{ width: ((row.avg_rent_to_home_value || 0) / (maxRentToValue || 1) * 100) + '%', backgroundColor: barColor(idx) }"></div>
+									</div>
+									<span class="bar-val">{{ formatPercentRatio(row.avg_rent_to_home_value) }}</span>
+								</div>
+								<div v-if="filteredRentToValue.length === 0" class="empty">No data</div>
 							</div>
 						</div>
 					</div>
-					<div class="panel-body">
-						<div class="table-header population-growth">
-							<span class="col-metro">Metro</span>
-							<span class="col-base">Base Year Pop.</span>
-							<span class="col-current">Current Year Pop.</span>
-							<span class="col-rate"></span>
+
+					<div class="panel">
+						<div class="panel-header">
+							<div class="panel-title">% of Population Growth</div>
+							<div class="year-pickers">
+								<div class="year-picker">
+									<span class="year-label">Base Year</span>
+									<el-select v-model="populationBaseYear" style="width: 110px">
+										<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
+									</el-select>
+								</div>
+								<div class="year-picker">
+									<span class="year-label">Current Year</span>
+									<el-select v-model="populationCurrentYear" style="width: 110px">
+										<el-option v-for="y in yearList" :key="y" :label="y" :value="y" />
+									</el-select>
+								</div>
+							</div>
 						</div>
-						<div class="table-body">
-							<div v-for="(row, idx) in filteredPopulationGrowth" :key="row.metro + idx" class="table-row population-growth">
-								<span class="col-metro">{{ row.metro }}</span>
-								<span class="col-base">{{ formatNumberK(row.base_year_population) }}</span>
-								<span class="col-current">{{ formatNumberK(row.current_year_population) }}</span>
-								<span class="col-rate">
-									<div class="bar-line">
-										<div class="bar-wrap">
-											<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxPopulationGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+						<div class="panel-body">
+							<div class="table-header population-growth">
+								<span class="col-metro">Metro</span>
+								<span class="col-base">Base Year Pop.</span>
+								<span class="col-current">Current Year Pop.</span>
+								<span class="col-rate"></span>
+							</div>
+							<div class="table-body">
+								<div v-for="(row, idx) in filteredPopulationGrowth" :key="row.metro + idx" class="table-row population-growth">
+									<span class="col-metro">{{ row.metro }}</span>
+									<span class="col-base">{{ formatNumberK(row.base_year_population) }}</span>
+									<span class="col-current">{{ formatNumberK(row.current_year_population) }}</span>
+									<span class="col-rate">
+										<div class="bar-line">
+											<div class="bar-wrap">
+												<div class="bar" :style="{ width: toPercentWidth(row.growth_rate, maxPopulationGrowthRate) + '%', backgroundColor: barColor(idx) }"></div>
+											</div>
+											<span class="bar-text">{{ formatPercentAuto(row.growth_rate) }}</span>
 										</div>
-										<span class="bar-text">{{ formatPercentAuto(row.growth_rate) }}</span>
-									</div>
-								</span>
-							</div>
-							<div v-if="filteredPopulationGrowth.length === 0" class="empty">No data</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="panel">
-					<div class="panel-header">
-						<div class="panel-title">Home Value</div>
-						<div class="range">
-							<span class="range-label">Home Value</span>
-							<el-slider v-model="homeValueRange" range :min="homeValueMin" :max="homeValueMax" :step="1000" :show-tooltip="false" style="width: 280px" />
-							<span class="range-value">{{ formatCurrencyK(homeValueRange[0]) }} - {{ formatCurrencyK(homeValueRange[1]) }}</span>
-						</div>
-					</div>
-					<div class="panel-body">
-						<div class="bar-list">
-							<div v-for="(row, idx) in filteredHomeValue" :key="row.metro + idx" class="bar-row">
-								<span class="bar-label">{{ row.metro }}</span>
-								<div class="bar-wrap">
-									<div class="bar" :style="{ width: ((row.avg_home_value_index || 0) / (maxHomeValue || 1) * 100) + '%', backgroundColor: barColor(idx) }"></div>
+									</span>
 								</div>
-								<span class="bar-val">{{ formatCurrencyK(row.avg_home_value_index) }}</span>
+								<div v-if="filteredPopulationGrowth.length === 0" class="empty">No data</div>
 							</div>
-							<div v-if="filteredHomeValue.length === 0" class="empty">No data</div>
+						</div>
+					</div>
+
+					<div class="panel">
+						<div class="panel-header">
+							<div class="panel-title">Home Value</div>
+							<div class="range">
+								<span class="range-label">Home Value</span>
+								<el-slider v-model="homeValueRange" range :min="homeValueMin" :max="homeValueMax" :step="1000" :show-tooltip="false" style="width: 280px" />
+								<span class="range-value">{{ formatCurrencyK(homeValueRange[0]) }} - {{ formatCurrencyK(homeValueRange[1]) }}</span>
+							</div>
+						</div>
+						<div class="panel-body">
+							<div class="bar-list">
+								<div v-for="(row, idx) in filteredHomeValue" :key="row.metro + idx" class="bar-row">
+									<span class="bar-label">{{ row.metro }}</span>
+									<div class="bar-wrap">
+										<div class="bar" :style="{ width: ((row.avg_home_value_index || 0) / (maxHomeValue || 1) * 100) + '%', backgroundColor: barColor(idx) }"></div>
+									</div>
+									<span class="bar-val">{{ formatCurrencyK(row.avg_home_value_index) }}</span>
+								</div>
+								<div v-if="filteredHomeValue.length === 0" class="empty">No data</div>
+							</div>
 						</div>
 					</div>
 				</div>
-			</div>
+			</template>
+
+			<component v-else-if="tabComponents[currentTab]" :is="tabComponents[currentTab]" />
 		</div>
 	</div>
 </template>
 <script setup lang="ts">
 import { getMsaHomeValueGrowthRank, getMsaHomeValueRank, getMsaMetrosList, getMsaPopulationGrowthRank, getMsaRentToValueRank } from "@/api/charts"
 import { computed, onMounted, ref, watch } from "vue"
+import Population from "./components/Population/Population.vue"
+import Demographics from "./components/Demographics/Demographics.vue"
+import EducationIncome from "./components/EducationIncome/EducationIncome.vue"
+import Economy from "./components/Economy/Economy.vue"
+import Rent from "./components/Rent/Rent.vue"
+import HomeValue from "./components/HomeValue/HomeValue.vue"
+import SupplyDemand from "./components/SupplyDemand/SupplyDemand.vue"
+
+const tabs = [
+	"Metrics Rank",
+	"Population",
+	"Demographics",
+	"Education & Income",
+	"Economy",
+	"Rent",
+	"Home Value",
+	"Supply & Demand"
+]
+const currentTab = ref("Metrics Rank")
+
+// Component mapping for tabs
+const tabComponents: Record<string, any> = {
+	"Population": Population,
+	"Demographics": Demographics,
+	"Education & Income": EducationIncome,
+	"Economy": Economy,
+	"Rent": Rent,
+	"Home Value": HomeValue,
+	"Supply & Demand": SupplyDemand
+}
 
 type MsaHomeValueGrowthItem = {
 	metro: string
@@ -497,6 +552,75 @@ const filteredHomeValue = computed(() => {
 	}
 
 	.header-section {
+		width: 100%;
+		padding: 20px 20px 10px;
+		text-align: center;
+
+		.title {
+			font-size: 32px;
+			font-weight: 700;
+			color: #1a1a1a;
+			margin: 0 0 8px 0 !important;
+			line-height: 1.2;
+		}
+
+		.subtitle {
+			font-size: 16px;
+			color: #666;
+			font-weight: 400;
+			margin: 0;
+			line-height: 1.5;
+			max-width: 1200px;
+			margin: 0 auto;
+		}
+	}
+
+	.metrics-container {
+		display: flex;
+		justify-content: center;
+		padding: 0 20px;
+		margin-bottom: 24px;
+	}
+
+	.metrics-bar {
+		display: flex;
+		align-items: center;
+		background-color: #f8f9fa;
+		padding: 4px;
+		border-radius: 12px;
+		border: 1px solid #eee;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+	}
+
+	.tabs-wrapper {
+		display: flex;
+		gap: 4px;
+	}
+
+	.metric-item {
+		padding: 8px 20px;
+		cursor: pointer;
+		border-radius: 8px;
+		font-size: 14px;
+		color: #666;
+		transition: all 0.2s ease;
+		font-weight: 500;
+		user-select: none;
+
+		&:hover {
+			color: #000;
+			background-color: rgba(0, 0, 0, 0.05);
+		}
+
+		&.active {
+			background-color: #fff;
+			color: #000;
+			font-weight: 600;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+		}
+	}
+
+	.msa-header-section {
 		text-align: center;
 		margin-bottom: 10px;
 
