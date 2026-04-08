@@ -35,11 +35,21 @@
 
 		<div class="legend-section">
 			<div class="legend-group" v-if="selectedMetros.length > 0">
-				<div class="legend-label">Metro</div>
-				<div class="legend-items">
-					<div v-for="m in selectedMetrosData" :key="m.name" class="legend-item">
+				<div class="legend-header">
+					<div class="legend-label">Metro</div>
+					<div 
+						v-if="selectedMetros.length > 6" 
+						class="more-btn" 
+						@click="isLegendExpanded = !isLegendExpanded"
+					>
+						{{ isLegendExpanded ? 'Collapse' : 'More' }}
+						<el-icon><ArrowDown v-if="!isLegendExpanded" /><ArrowUp v-else /></el-icon>
+					</div>
+				</div>
+				<div class="legend-items" :class="{ expanded: isLegendExpanded }">
+					<div v-for="m in displayedMetrosData" :key="m.name" class="legend-item">
 						<span class="color-box" :style="{ backgroundColor: m.color }"></span>
-						<span class="name">{{ m.name }}</span>
+						<span class="name" :title="m.name">{{ m.name }}</span>
 					</div>
 				</div>
 			</div>
@@ -59,8 +69,9 @@
 				<div class="map-container placeholder-box">
 					<div class="placeholder-text">Map Placeholder (Figure 5)</div>
 				</div>
-				<div class="chart-container placeholder-box">
-					<div class="placeholder-text">Accumulative Population Growth Chart Placeholder</div>
+				<div class="chart-container panel">
+					<div class="panel-header">Accumulative Population Growth</div>
+					<div class="panel-body chart-body" ref="growthChartRef"></div>
 				</div>
 			</div>
 			<div class="bottom-row">
@@ -76,12 +87,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { getMsaMetrosList } from "@/api/charts"
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { getMsaMetrosList, getRrowthTrend } from "@/api/charts"
+import * as echarts from 'echarts'
+import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 
 const metroList = ref<string[]>([])
 const selectedMetros = ref<string[]>([])
 const yearRange = ref([2011, 2024])
+const isLegendExpanded = ref(false)
+
+const growthChartRef = ref<HTMLElement | null>(null)
+let growthChart: echarts.ECharts | null = null
 
 const selectedMetrosValue = computed({
 	get: () => selectedMetros.value,
@@ -161,8 +178,129 @@ const selectedMetrosData = computed(() => {
 	}))
 })
 
-onMounted(() => {
-	fetchMetroList()
+const displayedMetrosData = computed(() => {
+	if (isLegendExpanded.value) return selectedMetrosData.value
+	return selectedMetrosData.value.slice(0, 6)
+})
+
+const initChart = () => {
+	if (!growthChartRef.value) return
+	growthChart = echarts.init(growthChartRef.value)
+	window.addEventListener('resize', () => growthChart?.resize())
+}
+
+const updateChart = async () => {
+	if (!growthChart) return
+	
+	try {
+		const params = {
+			base_year: yearRange.value[0],
+			current_year: yearRange.value[1],
+			metro: selectedMetros.value,
+			top: 10
+		}
+		
+		const res: any = await getRrowthTrend(params)
+		const data = res?.data ?? []
+		
+		if (!data.length) {
+			growthChart.clear()
+			return
+		}
+
+		// We need to extract all years for X axis
+		const years = Array.from(new Set(data.flatMap((m: any) => m.data.map((d: any) => d.year)))).sort((a: any, b: any) => a - b)
+		
+		const series = data.map((m: any, index: number) => {
+			const color = metroColorsMap[m.metro] || colors[index % colors.length]
+			return {
+				name: m.metro,
+				type: 'line',
+				smooth: true,
+				data: years.map(y => {
+					const point = m.data.find((d: any) => d.year === y)
+					// 使用 growth_rate 字段，如果为 undefined 则显示 null
+					if (!point || point.growth_rate === undefined || point.growth_rate === null) return null
+					return (point.growth_rate * 100).toFixed(2)
+				}),
+				itemStyle: { color },
+				lineStyle: { width: 3 },
+				symbol: 'none',
+				endLabel: {
+					show: true,
+					formatter: (params: any) => {
+						if (params.value === null) return ''
+						return `${params.value}%`
+					},
+					fontSize: 10,
+					color: '#333',
+					offset: [10, 0]
+				}
+			}
+		})
+
+		const option = {
+			tooltip: {
+				trigger: 'axis',
+				formatter: (params: any) => {
+					let html = `<div style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">${params[0].axisValue}</div>`
+					params.forEach((p: any) => {
+						if (p.value !== null && p.value !== undefined) {
+							html += `<div style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 2px;">
+								<span style="width: 8px; height: 8px; border-radius: 50%; background: ${p.color}"></span>
+								<span style="flex: 1; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">${p.seriesName}</span>
+								<span style="font-weight: 600;">${p.value}%</span>
+							</div>`
+						}
+					})
+					return html
+				}
+			},
+			grid: {
+				top: '15%',
+				left: '5%',
+				right: '12%',
+				bottom: '10%',
+				containLabel: true
+			},
+			xAxis: {
+				type: 'category',
+				data: years,
+				axisLine: { lineStyle: { color: '#eee' } },
+				axisLabel: { color: '#666', fontSize: 11 },
+				boundaryGap: false
+			},
+			yAxis: {
+				type: 'value',
+				axisLabel: { 
+					color: '#666', 
+					fontSize: 11,
+					formatter: '{value}%'
+				},
+				splitLine: { lineStyle: { color: '#f5f5f5' } }
+			},
+			series
+		}
+		
+		growthChart.setOption(option, true)
+	} catch (err) {
+		console.error("Failed to update chart:", err)
+	}
+}
+
+watch([selectedMetros, yearRange], () => {
+	updateChart()
+})
+
+onMounted(async () => {
+	initChart()
+	await fetchMetroList()
+	updateChart()
+})
+
+onUnmounted(() => {
+	window.removeEventListener('resize', () => growthChart?.resize())
+	growthChart?.dispose()
 })
 </script>
 
@@ -221,22 +359,52 @@ onMounted(() => {
 	gap: 60px;
 	margin-bottom: 24px;
 	padding: 0 4px;
+	align-items: flex-start;
 
 	.legend-group {
+		flex: 1;
+		min-width: 0;
+
+		.legend-header {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			margin-bottom: 8px;
+		}
+
 		.legend-label {
 			font-size: 13px;
 			color: #333;
-			margin-bottom: 8px;
 			font-weight: 600;
+		}
+
+		.more-btn {
+			font-size: 12px;
+			color: #3b82f6;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			gap: 2px;
+			user-select: none;
+
+			&:hover {
+				color: #2563eb;
+			}
 		}
 
 		.legend-items {
 			display: grid;
 			grid-template-columns: repeat(3, 1fr);
 			gap: 10px 30px;
+			transition: all 0.3s ease;
+
+			&.expanded {
+				// No extra styles needed as grid will auto-expand
+			}
 		}
 
 		&.country-group {
+			flex: 0 0 auto;
 			.legend-items {
 				grid-template-columns: 1fr;
 			}
@@ -247,6 +415,7 @@ onMounted(() => {
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		min-width: 0;
 
 		.color-box {
 			width: 14px;
@@ -259,6 +428,8 @@ onMounted(() => {
 			font-size: 12px;
 			color: #444;
 			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 	}
 }
@@ -274,11 +445,33 @@ onMounted(() => {
 		gap: 20px;
 	}
 
+	.panel {
+		background: #fff;
+		border: 1px solid #eee;
+		border-radius: 4px;
+		min-height: 400px;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.panel-header {
+		padding: 12px 16px;
+		font-size: 14px;
+		font-weight: 600;
+		color: #333;
+		border-bottom: 1px solid #f5f5f5;
+	}
+
+	.chart-body {
+		flex: 1;
+		min-height: 340px;
+	}
+
 	.placeholder-box {
 		background: #fdfdfd;
 		border: 1px solid #eee;
 		border-radius: 4px;
-		min-height: 360px;
+		min-height: 400px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
