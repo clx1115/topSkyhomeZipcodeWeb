@@ -556,6 +556,13 @@ onUnmounted(() => {
 		white-space: nowrap;
 	}
 
+	:deep(.el-select) {
+		.el-select__selection {
+			flex-wrap: nowrap;
+			overflow: hidden;
+		}
+	}
+
 	.slider-container {
 		display: flex;
 		align-items: center;
